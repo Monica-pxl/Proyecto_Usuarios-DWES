@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">🏠 Mi Aplicación</span>
+            <div class="d-flex align-items-center">
+                <div class="text-end me-3 text-white">
+                    <div class="fw-bold" id="user-name">Cargando...</div>
+                    <div class="small opacity-75" id="user-email"></div>
+                </div>
+                <button class="btn btn-light" onclick="logout()"><strong>Cerrar Sesión</strong></button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div id="message-container"></div>
+
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center mb-3">
+                    <span class="fs-1 me-3">👋</span>
+                    <div>
+                        <h1 class="card-title h3 mb-1" id="welcome-title">¡Bienvenido!</h1>
+                        <span class="badge bg-success">✓ Sesión Activa</span>
+                    </div>
+                </div>
+                <p class="card-text text-muted">
+                    Has iniciado sesión correctamente. Esta es tu página de inicio protegida.
+                    Solo los usuarios autenticados con estado activo pueden acceder a esta página.
+                </p>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="fs-3 me-2">📧</span>
+                            <h5 class="card-title mb-0 fw-semibold">Tu Correo</h5>
+                        </div>
+                        <p class="card-text text-primary fw-bold" id="info-correo">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="fs-3 me-2">🆔</span>
+                            <h5 class="card-title mb-0 fw-semibold">ID de Usuario</h5>
+                        </div>
+                        <p class="card-text text-primary fw-bold" id="info-id">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="fs-3 me-2">✅</span>
+                            <h5 class="card-title mb-0 fw-semibold">Estado de la Cuenta</h5>
+                        </div>
+                        <p class="card-text text-muted small mb-2">Tu cuenta está activa y verificada</p>
+                        <span class="badge bg-success fs-6" id="info-estado">Activo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usuarios Cercanos -->
+        <div class="card mt-4 border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <span class="fs-3 me-2">📍</span>
+                        <h2 class="card-title h4 mb-0 fw-semibold">Usuarios Cercanos</h2>
+                    </div>
+                    <button class="btn btn-primary" onclick="cargarUsuariosCercanos()">🔄 Actualizar</button>
+                </div>
+                <p class="text-muted">Usuarios activos a menos de 5 km:</p>
+                <div id="usuarios-cercanos-container">
+                    <div class="text-center py-3"><div class="spinner-border"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4 border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center mb-3">
+                    <span class="fs-3 me-2">🔧</span>
+                    <h2 class="card-title h4 mb-0 fw-semibold">Prueba de API</h2>
+                </div>
+                <p class="text-muted">Puedes probar los endpoints de la API directamente desde aquí:</p>
+
+                <div class="mt-3">
+                    <button class="btn btn-primary btn-lg me-2 mb-2" onclick="testPerfil()">
+                        <strong>GET</strong> /api/perfil
+                    </button>
+                    <button class="btn btn-success btn-lg me-2 mb-2" onclick="testHome()">
+                        <strong>GET</strong> /api/home
+                    </button>
+                    <button class="btn btn-info btn-lg me-2 mb-2" onclick="testGeneral()">
+                        <strong>GET</strong> /api/general
+                    </button>
+                    <button class="btn btn-warning btn-lg mb-2" onclick="testLogout()">
+                        <strong>POST</strong> /api/logout
+                    </button>
+
+                    <pre id="api-response" class="bg-dark text-light rounded p-3 mt-3" style="display: none;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('auth_token');
+        const baseUrl = window.location.origin + window.location.pathname.replace(/home$/, '').replace(/\/$/, '');
+        let currentUser = null;
+
+        // Cargar datos del usuario al iniciar
+        async function loadUserData() {
+            if (!token) {
+                window.location.href = baseUrl + '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch(baseUrl + '/api/perfil', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data.user;
+                    displayUserData(currentUser);
+
+                    // Verificar si necesita actualizar ubicación
+                    if (!currentUser.latitud || !currentUser.longitud) {
+                        await solicitarYActualizarUbicacion();
+                    }
+                } else {
+                    // Token inválido, redirigir al login
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    window.location.href = baseUrl + '/login';
+                }
+            } catch (error) {
+                console.error('Error al cargar datos del usuario:', error);
+                showMessage('Error al cargar datos del usuario', 'error');
+            }
+        }
+
+        function displayUserData(user) {
+            document.getElementById('user-name').textContent = user.nombre;
+            document.getElementById('user-email').textContent = user.correo;
+            document.getElementById('welcome-title').textContent = `👋 ¡Bienvenido, ${user.nombre}!`;
+            document.getElementById('info-correo').textContent = user.correo;
+            document.getElementById('info-id').textContent = user.id;
+            document.getElementById('info-estado').textContent = user.estado ? 'Activo' : 'Inactivo';
+            document.title = `Inicio - ${user.nombre}`;
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch(baseUrl + '/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    showMessage('Sesión cerrada correctamente', 'success');
+                    setTimeout(() => {
+                        window.location.href = baseUrl + '/login';
+                    }, 1000);
+                } else {
+                    showMessage('Error al cerrar sesión: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        async function testPerfil() {
+            const responseDiv = document.getElementById('api-response');
+            responseDiv.style.display = 'block';
+            responseDiv.textContent = 'Cargando...';
+
+            try {
+                const response = await fetch(baseUrl + '/api/perfil', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                responseDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testHome() {
+            const responseDiv = document.getElementById('api-response');
+            responseDiv.style.display = 'block';
+            responseDiv.textContent = 'Cargando...';
+
+            try {
+                const response = await fetch(baseUrl + '/api/home', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                responseDiv.textContent = JSON.stringify(await response.json(), null, 2);
+            } catch (error) {
+                responseDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testGeneral() {
+            const responseDiv = document.getElementById('api-response');
+            responseDiv.style.display = 'block';
+            responseDiv.textContent = 'Cargando...';
+
+            try {
+                const response = await fetch(baseUrl + '/api/general', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                responseDiv.textContent = JSON.stringify(await response.json(), null, 2);
+            } catch (error) {
+                responseDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testLogout() {
+            const responseDiv = document.getElementById('api-response');
+            responseDiv.style.display = 'block';
+            responseDiv.textContent = 'Cargando...';
+
+            try {
+                const response = await fetch(baseUrl + '/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                responseDiv.textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok) {
+                    showMessage('Nota: Esto cerrará tu sesión en 3 segundos...', 'error');
+                    setTimeout(() => {
+                        localStorage.removeItem('auth_token');
+                        localStorage.removeItem('user');
+                        window.location.href = baseUrl + '/login';
+                    }, 3000);
+                }
+            } catch (error) {
+                responseDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function showMessage(message, type) {
+            const container = document.getElementById('message-container');
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            container.innerHTML = `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        async function cargarUsuariosCercanos() {
+            const container = document.getElementById('usuarios-cercanos-container');
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+
+            try {
+                const response = await fetch(baseUrl + '/api/home', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (data.usuariosCercanos.length === 0) {
+                        container.innerHTML = '<div class="alert alert-info">📍 No hay usuarios activos a menos de 5 km</div>';
+                    } else {
+                        let html = '<div class="row g-3">';
+                        data.usuariosCercanos.forEach(u => {
+                            html += `
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card border-0 shadow-sm">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:50px;height:50px;font-size:24px">
+                                                    ${u.nombre.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <h5 class="mb-0 fw-bold">${u.nombre}</h5>
+                                                    <small class="text-muted">${u.correo}</small>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mt-3">
+                                                <span class="badge bg-success">✓ Activo</span>
+                                                <span class="badge bg-primary">📍 ${u.distancia} km</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div><div class="alert alert-success mt-3 mb-0">✓ ${data.total} usuario(s) cercano(s)</div>';
+                        container.innerHTML = html;
+                    }
+                } else {
+                    container.innerHTML = `<div class="alert alert-warning">⚠️ ${data.error || 'Error al cargar usuarios'}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function solicitarYActualizarUbicacion() {
+            try {
+                const ubicacion = await obtenerUbicacion();
+
+                // Actualizar en el servidor
+                const response = await fetch(baseUrl + '/api/actualizar-ubicacion', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        latitud: ubicacion.latitude,
+                        longitud: ubicacion.longitude
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('✓ Ubicación actualizada correctamente', 'success');
+                    // Actualizar usuario actual
+                    currentUser.latitud = data.latitud;
+                    currentUser.longitud = data.longitud;
+                    // Cargar usuarios cercanos ahora que tenemos ubicación
+                    cargarUsuariosCercanos();
+                } else {
+                    showMessage('⚠️ ' + (data.error || 'Error al actualizar ubicación'), 'error');
+                }
+            } catch (error) {
+                console.warn('No se pudo obtener/actualizar ubicación:', error);
+                showMessage('⚠️ No se pudo obtener tu ubicación. Los usuarios cercanos no estarán disponibles.', 'error');
+            }
+        }
+
+        function obtenerUbicacion() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject(new Error('Geolocalización no soportada'));
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (position) => resolve({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    }),
+                    (error) => reject(error),
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            });
+        }
+
+        // Verificar si hay token en localStorage
+        if (!token) {
+            console.warn('No hay token en localStorage');
+            window.location.href = baseUrl + '/login';
+        } else {
+            // Cargar datos del usuario
+            loadUserData().then(() => {
+                // Solo cargar usuarios cercanos si ya tiene ubicación
+                if (currentUser && currentUser.latitud && currentUser.longitud) {
+                    cargarUsuariosCercanos();
+                }
+            });
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
