@@ -110,9 +110,6 @@
                     <button class="btn btn-success btn-lg me-2 mb-2" onclick="testHome()">
                         <strong>GET</strong> /api/home
                     </button>
-                    <button class="btn btn-info btn-lg me-2 mb-2" onclick="testGeneral()">
-                        <strong>GET</strong> /api/general
-                    </button>
                     <button class="btn btn-warning btn-lg mb-2" onclick="testLogout()">
                         <strong>POST</strong> /api/logout
                     </button>
@@ -226,21 +223,6 @@
 
             try {
                 const response = await fetch(baseUrl + '/api/home', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                responseDiv.textContent = JSON.stringify(await response.json(), null, 2);
-            } catch (error) {
-                responseDiv.textContent = 'Error: ' + error.message;
-            }
-        }
-
-        async function testGeneral() {
-            const responseDiv = document.getElementById('api-response');
-            responseDiv.style.display = 'block';
-            responseDiv.textContent = 'Cargando...';
-
-            try {
-                const response = await fetch(baseUrl + '/api/general', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 responseDiv.textContent = JSON.stringify(await response.json(), null, 2);
