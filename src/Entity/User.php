@@ -39,6 +39,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $fechaActualizacionUbicacion = null;
 
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $fechaInicioSesion = null;
+
     #[ORM\Column]
     private bool $estado = true;
 
@@ -142,6 +145,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setFechaActualizacionUbicacion(?\DateTimeInterface $fecha): self
     {
         $this->fechaActualizacionUbicacion = $fecha;
+        return $this;
+    }
+
+    public function getFechaInicioSesion(): ?\DateTimeInterface
+    {
+        return $this->fechaInicioSesion;
+    }
+
+    public function setFechaInicioSesion(?\DateTimeInterface $fecha): self
+    {
+        $this->fechaInicioSesion = $fecha;
         return $this;
     }
 

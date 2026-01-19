@@ -3,7 +3,11 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\Mensage;
+use App\Entity\Sala;
 use App\Repository\UserRepository;
+use App\Repository\MensageRepository;
+use App\Repository\SalaRepository;
 use App\Service\GeoLocationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,7 +24,9 @@ class ApiAuthController extends AbstractController
         private EntityManagerInterface $entityManager,
         private UserRepository $userRepository,
         private UserPasswordHasherInterface $passwordHasher,
-        private GeoLocationService $geoLocationService
+        private GeoLocationService $geoLocationService,
+        private MensageRepository $mensageRepository,
+        private SalaRepository $salaRepository
     ) {}
 
     /**
@@ -59,6 +65,7 @@ class ApiAuthController extends AbstractController
         // Actualizar usuario: marcar estado = true y guardar token
         $user->setEstado(true);
         $user->setTokenAutenticacion($token);
+        $user->setFechaInicioSesion(new \DateTime()); // Guardar fecha de inicio de sesión
 
         // Guardar coordenadas si se proporcionan
         if (isset($data['latitud']) && isset($data['longitud'])) {
@@ -67,6 +74,8 @@ class ApiAuthController extends AbstractController
             $user->setFechaActualizacionUbicacion(new \DateTime());
         }
 
+        // Persistir y hacer flush para guardar cambios
+        $this->entityManager->persist($user);
         $this->entityManager->flush();
 
         return $this->json([
@@ -344,5 +353,139 @@ class ApiAuthController extends AbstractController
             'usuarios' => $todosUsuarios,
             'total' => count($todosUsuarios)
         ]);
+    }
+
+    /**
+     * Chat General - Obtener mensajes desde que el usuario inició sesión
+     * GET /api/general
+     */
+    #[Route('/general', name: 'api_chat_general_get', methods: ['GET'])]
+    public function chatGeneralGet(): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Obtener o crear la sala general
+        $salaGeneral = $this->salaRepository->findOneBy(['nombre' => 'General']);
+
+        if (!$salaGeneral) {
+            // Crear la sala general si no existe
+            $salaGeneral = new Sala();
+            $salaGeneral->setNombre('General');
+            $salaGeneral->setActiva(true);
+            $salaGeneral->setFechaCreacion(new \DateTime());
+            $this->entityManager->persist($salaGeneral);
+            $this->entityManager->flush();
+        }
+
+        // Obtener la fecha de inicio de sesión del usuario
+        $fechaInicioSesion = $user->getFechaInicioSesion();
+
+        if (!$fechaInicioSesion) {
+            // Si no tiene fecha de inicio de sesión, usar la fecha actual
+            $fechaInicioSesion = new \DateTime();
+            $user->setFechaInicioSesion($fechaInicioSesion);
+            $this->entityManager->flush();
+        }
+
+        // Obtener mensajes de la sala general desde que el usuario inició sesión
+        // Solo de usuarios activos
+        $mensajes = $this->mensageRepository->createQueryBuilder('m')
+            ->innerJoin('m.autor', 'a')
+            ->where('m.sala = :sala')
+            ->andWhere('m.fechaCreacion >= :fechaInicio')
+            ->andWhere('a.estado = :activo')
+            ->setParameter('sala', $salaGeneral)
+            ->setParameter('fechaInicio', $fechaInicioSesion)
+            ->setParameter('activo', true)
+            ->orderBy('m.fechaCreacion', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Formatear mensajes
+        $mensajesFormateados = [];
+        foreach ($mensajes as $mensaje) {
+            $mensajesFormateados[] = [
+                'id' => $mensaje->getId(),
+                'contenido' => $mensaje->getContenido(),
+                'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
+                'autor' => [
+                    'id' => $mensaje->getAutor()->getId(),
+                    'nombre' => $mensaje->getAutor()->getNombre()
+                ]
+            ];
+        }
+
+        return $this->json([
+            'success' => true,
+            'mensajes' => $mensajesFormateados,
+            'total' => count($mensajesFormateados)
+        ]);
+    }
+
+    /**
+     * Chat General - Enviar mensaje
+     * POST /api/general
+     */
+    #[Route('/general', name: 'api_chat_general_post', methods: ['POST'])]
+    public function chatGeneralPost(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['contenido']) || trim($data['contenido']) === '') {
+            return $this->json([
+                'error' => 'El contenido del mensaje es requerido'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Obtener o crear la sala general
+        $salaGeneral = $this->salaRepository->findOneBy(['nombre' => 'General']);
+
+        if (!$salaGeneral) {
+            // Crear la sala general si no existe
+            $salaGeneral = new Sala();
+            $salaGeneral->setNombre('General');
+            $salaGeneral->setActiva(true);
+            $salaGeneral->setFechaCreacion(new \DateTime());
+            $this->entityManager->persist($salaGeneral);
+            $this->entityManager->flush();
+        }
+
+        // Crear el mensaje
+        $mensaje = new Mensage();
+        $mensaje->setContenido(trim($data['contenido']));
+        $mensaje->setFechaCreacion(new \DateTime());
+        $mensaje->setAutor($user);
+        $mensaje->setSala($salaGeneral);
+        $mensaje->setLeidoPor([]); // Inicialmente nadie lo ha leído
+
+        $this->entityManager->persist($mensaje);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'mensaje' => [
+                'id' => $mensaje->getId(),
+                'contenido' => $mensaje->getContenido(),
+                'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
+                'autor' => [
+                    'id' => $user->getId(),
+                    'nombre' => $user->getNombre()
+                ]
+            ]
+        ], Response::HTTP_CREATED);
     }
 }

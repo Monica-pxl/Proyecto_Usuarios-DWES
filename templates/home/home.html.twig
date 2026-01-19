@@ -95,26 +95,27 @@
             </div>
         </div>
 
+        <!-- Chat General -->
         <div class="card mt-4 border-0 shadow-sm">
             <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-3">
-                    <span class="fs-3 me-2">🔧</span>
-                    <h2 class="card-title h4 mb-0 fw-semibold">Prueba de API</h2>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <span class="fs-3 me-2">💬</span>
+                        <h2 class="card-title h4 mb-0 fw-semibold">Chat General</h2>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="cargarMensajesGenerales()">🔄 Actualizar</button>
                 </div>
-                <p class="text-muted">Puedes probar los endpoints de la API directamente desde aquí:</p>
+                <p class="text-muted">Chat público para todos los usuarios activos:</p>
 
-                <div class="mt-3">
-                    <button class="btn btn-primary btn-lg me-2 mb-2" onclick="testPerfil()">
-                        <strong>GET</strong> /api/perfil
-                    </button>
-                    <button class="btn btn-success btn-lg me-2 mb-2" onclick="testHome()">
-                        <strong>GET</strong> /api/home
-                    </button>
-                    <button class="btn btn-warning btn-lg mb-2" onclick="testLogout()">
-                        <strong>POST</strong> /api/logout
-                    </button>
+                <!-- Mensajes -->
+                <div id="chat-mensajes-container" class="border rounded p-3 mb-3 bg-light" style="height: 300px; overflow-y: auto;">
+                    <div class="text-center py-3"><div class="spinner-border"></div></div>
+                </div>
 
-                    <pre id="api-response" class="bg-dark text-light rounded p-3 mt-3" style="display: none;"></pre>
+                <!-- Formulario para enviar mensaje -->
+                <div class="input-group">
+                    <input type="text" id="mensaje-input" class="form-control" placeholder="Escribe un mensaje..." onkeypress="if(event.key === 'Enter') enviarMensaje()">
+                    <button class="btn btn-primary" onclick="enviarMensaje()">📤 Enviar</button>
                 </div>
             </div>
         </div>
@@ -122,8 +123,12 @@
 
     <script>
         const token = localStorage.getItem('auth_token');
-        const baseUrl = window.location.origin + window.location.pathname.replace(/home$/, '').replace(/\/$/, '');
+        // Construir baseUrl de manera más robusta
+        const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
         let currentUser = null;
+
+        console.log('Token:', token ? token.substring(0, 20) + '...' : 'NO HAY TOKEN');
+        console.log('Base URL:', baseUrl);
 
         // Cargar datos del usuario al iniciar
         async function loadUserData() {
@@ -194,70 +199,6 @@
                 }
             } catch (error) {
                 showMessage('Error de conexión', 'error');
-            }
-        }
-
-        async function testPerfil() {
-            const responseDiv = document.getElementById('api-response');
-            responseDiv.style.display = 'block';
-            responseDiv.textContent = 'Cargando...';
-
-            try {
-                const response = await fetch(baseUrl + '/api/perfil', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                const data = await response.json();
-                responseDiv.textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                responseDiv.textContent = 'Error: ' + error.message;
-            }
-        }
-
-        async function testHome() {
-            const responseDiv = document.getElementById('api-response');
-            responseDiv.style.display = 'block';
-            responseDiv.textContent = 'Cargando...';
-
-            try {
-                const response = await fetch(baseUrl + '/api/home', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                responseDiv.textContent = JSON.stringify(await response.json(), null, 2);
-            } catch (error) {
-                responseDiv.textContent = 'Error: ' + error.message;
-            }
-        }
-
-        async function testLogout() {
-            const responseDiv = document.getElementById('api-response');
-            responseDiv.style.display = 'block';
-            responseDiv.textContent = 'Cargando...';
-
-            try {
-                const response = await fetch(baseUrl + '/api/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const data = await response.json();
-                responseDiv.textContent = JSON.stringify(data, null, 2);
-
-                if (response.ok) {
-                    showMessage('Nota: Esto cerrará tu sesión en 3 segundos...', 'error');
-                    setTimeout(() => {
-                        localStorage.removeItem('auth_token');
-                        localStorage.removeItem('user');
-                        window.location.href = baseUrl + '/login';
-                    }, 3000);
-                }
-            } catch (error) {
-                responseDiv.textContent = 'Error: ' + error.message;
             }
         }
 
@@ -375,6 +316,103 @@
             });
         }
 
+        async function cargarMensajesGenerales() {
+            const container = document.getElementById('chat-mensajes-container');
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+
+            try {
+                const response = await fetch(baseUrl + '/api/general', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                // Verificar si la respuesta es JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Respuesta no válida del servidor');
+                }
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (data.mensajes.length === 0) {
+                        container.innerHTML = '<div class="alert alert-info mb-0">💬 No hay mensajes aún. ¡Sé el primero en escribir!</div>';
+                    } else {
+                        let html = '';
+                        data.mensajes.forEach(msg => {
+                            const esMio = msg.autor.id === currentUser.id;
+                            const alignClass = esMio ? 'text-end' : 'text-start';
+                            const bgClass = esMio ? 'bg-primary text-white' : 'bg-white';
+
+                            html += `
+                                <div class="${alignClass} mb-3">
+                                    <div class="d-inline-block ${bgClass} rounded p-2 shadow-sm" style="max-width: 70%;">
+                                        <div class="fw-bold small">${msg.autor.nombre}</div>
+                                        <div>${msg.contenido}</div>
+                                        <div class="small opacity-75">${new Date(msg.fechaCreacion).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        container.innerHTML = html;
+                        // Scroll al final
+                        container.scrollTop = container.scrollHeight;
+                    }
+                } else {
+                    const errorMsg = data.error || 'Error al cargar mensajes';
+                    if (errorMsg.includes('no autenticado')) {
+                        container.innerHTML = '<div class="alert alert-warning mb-0">⚠️ Debes iniciar sesión para ver el chat</div>';
+                    } else {
+                        container.innerHTML = `<div class="alert alert-warning mb-0">⚠️ ${errorMsg}</div>`;
+                    }
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-danger mb-0">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function enviarMensaje() {
+            const input = document.getElementById('mensaje-input');
+            const contenido = input.value.trim();
+
+            if (!contenido) {
+                showMessage('⚠️ El mensaje no puede estar vacío', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(baseUrl + '/api/general', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ contenido })
+                });
+
+                // Verificar si la respuesta es JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Respuesta no válida del servidor');
+                }
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    input.value = ''; // Limpiar input
+                    await cargarMensajesGenerales(); // Recargar mensajes
+                } else {
+                    const errorMsg = data.error || 'Error al enviar mensaje';
+                    if (errorMsg.includes('no autenticado')) {
+                        showMessage('⚠️ Debes iniciar sesión para enviar mensajes', 'error');
+                    } else {
+                        showMessage('⚠️ ' + errorMsg, 'error');
+                    }
+                }
+            } catch (error) {
+                showMessage('❌ Error al enviar mensaje: ' + error.message, 'error');
+            }
+        }
+
         // Verificar si hay token en localStorage
         if (!token) {
             console.warn('No hay token en localStorage');
@@ -386,6 +424,11 @@
                 if (currentUser && currentUser.latitud && currentUser.longitud) {
                     cargarUsuariosCercanos();
                 }
+                // Cargar mensajes del chat general
+                cargarMensajesGenerales();
+
+                // Actualizar mensajes cada 5 segundos
+                setInterval(cargarMensajesGenerales, 5000);
             });
         }
     </script>
