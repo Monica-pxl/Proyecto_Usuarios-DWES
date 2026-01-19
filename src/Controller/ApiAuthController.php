@@ -226,7 +226,7 @@ class ApiAuthController extends AbstractController
     }
 
     /**
-     * Home endpoint - Lista usuarios activos cercanos (máximo 5km) y todos los usuarios activos
+     * Home endpoint - Lista usuarios activos cercanos (máximo 5km)
      */
     #[Route('/home', name: 'api_home', methods: ['GET'])]
     public function home(): JsonResponse
@@ -247,6 +247,65 @@ class ApiAuthController extends AbstractController
             ->getResult();
 
         $usuariosCercanos = [];
+
+        foreach ($usuariosActivos as $usuario) {
+            // Calcular distancia si ambos tienen coordenadas
+            if ($user->getLatitud() && $user->getLongitud() &&
+                $usuario->getLatitud() && $usuario->getLongitud()) {
+
+                $distancia = $this->geoLocationService->calcularDistancia(
+                    $user->getLatitud(),
+                    $user->getLongitud(),
+                    $usuario->getLatitud(),
+                    $usuario->getLongitud()
+                );
+
+                // Si está a menos de 5km, agregarlo a usuarios cercanos
+                if ($distancia <= 5.0) {
+                    $usuariosCercanos[] = [
+                        'id' => $usuario->getId(),
+                        'nombre' => $usuario->getNombre(),
+                        'correo' => $usuario->getCorreo(),
+                        'latitud' => $usuario->getLatitud(),
+                        'longitud' => $usuario->getLongitud(),
+                        'distancia' => $distancia
+                    ];
+                }
+            }
+        }
+
+        // Ordenar por distancia
+        usort($usuariosCercanos, fn($a, $b) => $a['distancia'] <=> $b['distancia']);
+
+        return $this->json([
+            'success' => true,
+            'usuariosCercanos' => $usuariosCercanos,
+            'total' => count($usuariosCercanos)
+        ]);
+    }
+
+    /**
+     * Usuarios endpoint - Lista todos los usuarios activos
+     * Requiere autenticación mediante token Bearer
+     */
+    #[Route('/usuarios', name: 'api_usuarios', methods: ['GET'])]
+    public function usuarios(): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json(['error' => 'No autenticado'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Obtener TODOS los usuarios activos (excepto el actual)
+        $usuariosActivos = $this->userRepository->createQueryBuilder('u')
+            ->where('u.estado = :estado')
+            ->andWhere('u.id != :userId')
+            ->setParameter('estado', true)
+            ->setParameter('userId', $user->getId())
+            ->getQuery()
+            ->getResult();
+
         $todosUsuarios = [];
 
         foreach ($usuariosActivos as $usuario) {
@@ -268,18 +327,12 @@ class ApiAuthController extends AbstractController
                     $usuario->getLatitud(),
                     $usuario->getLongitud()
                 );
-
-                // Si está a menos de 5km, agregarlo a usuarios cercanos
-                if ($datos['distancia'] <= 5.0) {
-                    $usuariosCercanos[] = $datos;
-                }
             }
 
             $todosUsuarios[] = $datos;
         }
 
-        // Ordenar ambas listas por distancia
-        usort($usuariosCercanos, fn($a, $b) => $a['distancia'] <=> $b['distancia']);
+        // Ordenar por distancia (los que tienen distancia primero)
         usort($todosUsuarios, function($a, $b) {
             if ($a['distancia'] === null) return 1;
             if ($b['distancia'] === null) return -1;
@@ -288,8 +341,6 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'usuariosCercanos' => $usuariosCercanos,
-            'totalCercanos' => count($usuariosCercanos),
             'usuarios' => $todosUsuarios,
             'total' => count($todosUsuarios)
         ]);
