@@ -18,11 +18,18 @@ class Sala
     #[ORM\Column(length: 255)]
     private ?string $nombre = null;
 
+    #[ORM\Column(length: 50)]
+    private ?string $tipo = 'general'; // 'general' o 'privada'
+
     #[ORM\Column]
     private ?bool $activa = null;
 
     #[ORM\Column]
     private ?\DateTime $fechaCreacion = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $creador = null;
 
     /**
      * @var Collection<int, User>
@@ -79,6 +86,30 @@ class Sala
     public function setFechaCreacion(\DateTime $fechaCreacion): static
     {
         $this->fechaCreacion = $fechaCreacion;
+
+        return $this;
+    }
+
+    public function getTipo(): ?string
+    {
+        return $this->tipo;
+    }
+
+    public function setTipo(string $tipo): static
+    {
+        $this->tipo = $tipo;
+
+        return $this;
+    }
+
+    public function getCreador(): ?User
+    {
+        return $this->creador;
+    }
+
+    public function setCreador(?User $creador): static
+    {
+        $this->creador = $creador;
 
         return $this;
     }

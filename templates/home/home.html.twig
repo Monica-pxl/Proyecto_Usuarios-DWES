@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inicio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hover-shadow {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hover-shadow:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+    </style>
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-primary shadow-sm">
@@ -103,7 +112,10 @@
                         <span class="fs-3 me-2">💬</span>
                         <h2 class="card-title h4 mb-0 fw-semibold">Chat General</h2>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="cargarMensajesGenerales()">🔄 Actualizar</button>
+                    <div>
+                        <button class="btn btn-success btn-sm me-2" onclick="abrirModalSalaPrivada()">🔒 Sala Privada</button>
+                        <button class="btn btn-primary btn-sm" onclick="cargarMensajesGenerales()">🔄 Actualizar</button>
+                    </div>
                 </div>
                 <p class="text-muted">Chat público para todos los usuarios activos:</p>
 
@@ -119,6 +131,82 @@
                 </div>
             </div>
         </div>
+
+        <!-- Invitaciones Pendientes -->
+        <div class="card mt-4 border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <span class="fs-3 me-2">📬</span>
+                        <h2 class="card-title h4 mb-0 fw-semibold">Invitaciones Pendientes</h2>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="cargarInvitacionesPendientes()">🔄 Actualizar</button>
+                </div>
+                <div id="invitaciones-pendientes-container">
+                    <div class="text-center py-3"><div class="spinner-border"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Salas Privadas (oculto por defecto, se muestra si hay salas) -->
+        <div id="seccion-salas-privadas" class="card mt-4 border-0 shadow-sm" style="display: none;">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <span class="fs-3 me-2">🔒</span>
+                        <h2 class="card-title h4 mb-0 fw-semibold">Mis Salas Privadas</h2>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="cargarSalasPrivadas()">🔄 Actualizar</button>
+                </div>
+                <div id="salas-privadas-container">
+                    <div class="text-center py-3"><div class="spinner-border"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Privado (oculto por defecto) -->
+        <div id="chat-privado-section" class="card mt-4 border-0 shadow-sm" style="display: none;">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="cerrarChatPrivado()">← Volver</button>
+                        <span class="fs-3 me-2">🔒</span>
+                        <h2 class="card-title h4 mb-0 fw-semibold" id="nombre-sala-privada">Chat Privado</h2>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="cargarMensajesSalaPrivada()">🔄 Actualizar</button>
+                </div>
+                <p class="text-muted" id="participantes-sala-privada">Cargando participantes...</p>
+
+                <!-- Mensajes privados -->
+                <div id="chat-privado-mensajes-container" class="border rounded p-3 mb-3 bg-light" style="height: 300px; overflow-y: auto;">
+                    <div class="text-center py-3"><div class="spinner-border"></div></div>
+                </div>
+
+                <!-- Formulario para enviar mensaje privado -->
+                <div class="input-group">
+                    <input type="text" id="mensaje-privado-input" class="form-control" placeholder="Escribe un mensaje privado..." onkeypress="if(event.key === 'Enter') enviarMensajePrivado()">
+                    <button class="btn btn-primary" onclick="enviarMensajePrivado()">📤 Enviar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para crear sala privada -->
+        <div class="modal fade" id="modalSalaPrivada" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">🔒 Crear Sala Privada</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">Selecciona un usuario para crear una sala de chat privada:</p>
+                        <div id="usuarios-disponibles-container">
+                            <div class="text-center py-3"><div class="spinner-border"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -126,6 +214,9 @@
         // Construir baseUrl de manera más robusta
         const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
         let currentUser = null;
+        let usuariosConectadosAntes = []; // Para rastrear usuarios que se desconectan
+        let ultimoMensajeId = 0; // Para cargar solo mensajes nuevos
+        let mensajesMostrados = new Set(); // Para evitar duplicados
 
         console.log('Token:', token ? token.substring(0, 20) + '...' : 'NO HAY TOKEN');
         console.log('Base URL:', baseUrl);
@@ -316,11 +407,102 @@
             });
         }
 
+        async function cargarUsuariosConectados() {
+            try {
+                const response = await fetch(baseUrl + '/api/usuarios', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const lista = document.getElementById('usuarios-conectados-lista');
+                    const count = document.getElementById('usuarios-conectados-count');
+                    
+                    count.textContent = data.total;
+                    
+                    if (data.usuarios.length === 0) {
+                        lista.textContent = 'Solo tú estás conectado';
+                    } else {
+                        // Mostrar solo los primeros 5 nombres
+                        const nombres = data.usuarios.slice(0, 5).map(u => u.nombre);
+                        let texto = nombres.join(', ');
+                        
+                        if (data.usuarios.length > 5) {
+                            texto += ` y ${data.usuarios.length - 5} más`;
+                        }
+                        
+                        lista.textContent = texto;
+                    }
+                } else {
+                    document.getElementById('usuarios-conectados-lista').textContent = 'Error al cargar';
+                    document.getElementById('usuarios-conectados-count').textContent = '0';
+                }
+            } catch (error) {
+                console.error('Error al cargar usuarios conectados:', error);
+            }
+        }
+
         async function cargarMensajesGenerales() {
             const container = document.getElementById('chat-mensajes-container');
-            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+            
+            // Solo mostrar spinner en la primera carga
+            if (ultimoMensajeId === 0) {
+                container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+            }
 
             try {
+                // Primero cargar usuarios conectados
+                const usuariosResponse = await fetch(baseUrl + '/api/usuarios', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const usuariosData = await usuariosResponse.json();
+
+                // Detectar usuarios que se desconectaron
+                if (usuariosResponse.ok && usuariosData.success) {
+                    const idsActuales = usuariosData.usuarios.map(u => u.id);
+                    const idsAnteriores = usuariosConectadosAntes.map(u => u.id);
+                    
+                    // Encontrar usuarios que se desconectaron
+                    const desconectados = usuariosConectadosAntes.filter(u => !idsActuales.includes(u.id));
+                    
+                    // Mostrar mensaje de desconexión
+                    desconectados.forEach(usuario => {
+                        const mensajeDesconexion = `
+                            <div class="text-center mb-2">
+                                <div class="d-inline-block bg-danger bg-opacity-10 text-danger rounded p-2 small">
+                                    <span class="badge bg-danger me-2">●</span>
+                                    El usuario <strong>${usuario.nombre}</strong> se ha desconectado
+                                </div>
+                            </div>
+                        `;
+                        if (ultimoMensajeId > 0) { // Solo si ya hay mensajes cargados
+                            container.insertAdjacentHTML('beforeend', mensajeDesconexion);
+                        }
+                    });
+                    
+                    // Encontrar usuarios que se conectaron
+                    const conectados = usuariosData.usuarios.filter(u => !idsAnteriores.includes(u.id));
+                    
+                    // Mostrar mensaje de conexión
+                    conectados.forEach(usuario => {
+                        const mensajeConexion = `
+                            <div class="text-center mb-2">
+                                <div class="d-inline-block bg-success bg-opacity-10 text-success rounded p-2 small">
+                                    <span class="badge bg-success me-2">●</span>
+                                    El usuario <strong>${usuario.nombre}</strong> está en línea
+                                </div>
+                            </div>
+                        `;
+                        if (ultimoMensajeId > 0) { // Solo si ya hay mensajes cargados
+                            container.insertAdjacentHTML('beforeend', mensajeConexion);
+                        }
+                    });
+                    
+                    // Actualizar lista de usuarios anteriores
+                    usuariosConectadosAntes = usuariosData.usuarios;
+                }
+
+                // Luego cargar mensajes
                 const response = await fetch(baseUrl + '/api/general', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -334,29 +516,67 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    if (data.mensajes.length === 0) {
-                        container.innerHTML = '<div class="alert alert-info mb-0">💬 No hay mensajes aún. ¡Sé el primero en escribir!</div>';
-                    } else {
-                        let html = '';
-                        data.mensajes.forEach(msg => {
-                            const esMio = msg.autor.id === currentUser.id;
-                            const alignClass = esMio ? 'text-end' : 'text-start';
-                            const bgClass = esMio ? 'bg-primary text-white' : 'bg-white';
-
-                            html += `
-                                <div class="${alignClass} mb-3">
-                                    <div class="d-inline-block ${bgClass} rounded p-2 shadow-sm" style="max-width: 70%;">
-                                        <div class="fw-bold small">${msg.autor.nombre}</div>
-                                        <div>${msg.contenido}</div>
-                                        <div class="small opacity-75">${new Date(msg.fechaCreacion).toLocaleString()}</div>
+                    // Si es la primera carga, limpiar el spinner
+                    if (ultimoMensajeId === 0) {
+                        container.innerHTML = '';
+                        
+                        // Mostrar usuarios actualmente conectados solo en la primera carga
+                        if (usuariosResponse.ok && usuariosData.success && usuariosData.usuarios.length > 0) {
+                            const usuariosConectados = usuariosData.usuarios.slice(0, 3);
+                            usuariosConectados.forEach(usuario => {
+                                const html = `
+                                    <div class="text-center mb-2">
+                                        <div class="d-inline-block bg-success bg-opacity-10 text-success rounded p-2 small">
+                                            <span class="badge bg-success me-2">●</span>
+                                            El usuario <strong>${usuario.nombre}</strong> está en línea
+                                        </div>
                                     </div>
-                                </div>
-                            `;
-                        });
-                        container.innerHTML = html;
-                        // Scroll al final
-                        container.scrollTop = container.scrollHeight;
+                                `;
+                                container.insertAdjacentHTML('beforeend', html);
+                            });
+                            if (usuariosData.usuarios.length > 3) {
+                                const html = `
+                                    <div class="text-center mb-3">
+                                        <small class="text-muted">y ${usuariosData.usuarios.length - 3} usuario(s) más conectado(s)</small>
+                                    </div>
+                                `;
+                                container.insertAdjacentHTML('beforeend', html);
+                            }
+                        }
                     }
+                    
+                    if (data.mensajes.length === 0 && ultimoMensajeId === 0) {
+                        container.insertAdjacentHTML('beforeend', '<div class="alert alert-info mb-0 text-center">💬 No hay mensajes aún. ¡Sé el primero en escribir!</div>');
+                    } else {
+                        // Solo agregar mensajes nuevos
+                        data.mensajes.forEach(msg => {
+                            if (!mensajesMostrados.has(msg.id)) {
+                                mensajesMostrados.add(msg.id);
+                                const esMio = msg.autor.id === currentUser.id;
+                                const alignClass = esMio ? 'text-end' : 'text-start';
+                                const bgClass = esMio ? 'bg-primary text-white' : 'bg-white';
+
+                                const html = `
+                                    <div class="${alignClass} mb-3">
+                                        <div class="d-inline-block ${bgClass} rounded p-2 shadow-sm" style="max-width: 70%;">
+                                            <div class="fw-bold small">${msg.autor.nombre}</div>
+                                            <div>${msg.contenido}</div>
+                                            <div class="small opacity-75">${new Date(msg.fechaCreacion).toLocaleString()}</div>
+                                        </div>
+                                    </div>
+                                `;
+                                container.insertAdjacentHTML('beforeend', html);
+                                
+                                // Actualizar el último mensaje ID
+                                if (msg.id > ultimoMensajeId) {
+                                    ultimoMensajeId = msg.id;
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Scroll al final solo si hay contenido nuevo
+                    container.scrollTop = container.scrollHeight;
                 } else {
                     const errorMsg = data.error || 'Error al cargar mensajes';
                     if (errorMsg.includes('no autenticado')) {
@@ -426,10 +646,452 @@
                 }
                 // Cargar mensajes del chat general
                 cargarMensajesGenerales();
+                // Cargar invitaciones pendientes
+                cargarInvitacionesPendientes();
+                // Cargar salas privadas
+                cargarSalasPrivadas();
 
-                // Actualizar mensajes cada 5 segundos
+                // Actualizar mensajes del chat general cada 5 segundos
                 setInterval(cargarMensajesGenerales, 5000);
+                // Actualizar invitaciones cada 10 segundos
+                setInterval(cargarInvitacionesPendientes, 10000);
+                // Actualizar salas privadas cada 15 segundos
+                setInterval(cargarSalasPrivadas, 15000);
+                // Actualizar usuarios cercanos cada 10 segundos (para reflejar conexiones/desconexiones)
+                if (currentUser && currentUser.latitud && currentUser.longitud) {
+                    setInterval(cargarUsuariosCercanos, 10000);
+                }
+                // Actualizar mensajes de sala privada cada 5 segundos (si está abierta)
+                setInterval(() => {
+                    if (salaPrivadaActual) {
+                        cargarMensajesSalaPrivada();
+                    }
+                }, 5000);
             });
+        }
+
+        // =============== FUNCIONES PARA SALAS PRIVADAS ===============
+        let salaPrivadaActual = null;
+        let modalSalaPrivada = null;
+
+        // Abrir modal para crear sala privada
+        async function abrirModalSalaPrivada() {
+            if (!modalSalaPrivada) {
+                modalSalaPrivada = new bootstrap.Modal(document.getElementById('modalSalaPrivada'));
+            }
+
+            // Cargar usuarios disponibles
+            const container = document.getElementById('usuarios-disponibles-container');
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+
+            try {
+                const response = await fetch(baseUrl + '/api/usuarios', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (data.usuarios.length === 0) {
+                        container.innerHTML = '<div class="alert alert-info">No hay usuarios disponibles</div>';
+                    } else {
+                        let html = '<div class="list-group">';
+                        data.usuarios.forEach(usuario => {
+                            html += `
+                                <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
+                                        onclick="crearSalaPrivada(${usuario.id}, '${usuario.nombre}')">
+                                    <div>
+                                        <h6 class="mb-0">${usuario.nombre}</h6>
+                                        <small class="text-muted">${usuario.correo}</small>
+                                    </div>
+                                    <span class="badge bg-primary">Crear sala</span>
+                                </button>
+                            `;
+                        });
+                        html += '</div>';
+                        container.innerHTML = html;
+                    }
+                } else {
+                    container.innerHTML = `<div class="alert alert-warning">${data.error || 'Error al cargar usuarios'}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+
+            modalSalaPrivada.show();
+        }
+
+        // Crear sala privada con un usuario (enviar invitación)
+        async function crearSalaPrivada(usuarioId, nombreUsuario) {
+            try {
+                const response = await fetch(baseUrl + '/api/sala-privada/crear', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ usuarioId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showMessage(`✓ ${data.message}`, 'success');
+                    modalSalaPrivada.hide();
+                    // No abrir la sala, solo notificar que se envió la invitación
+                } else {
+                    showMessage('⚠️ ' + (data.error || 'Error al enviar invitación'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        // Cargar invitaciones pendientes
+        async function cargarInvitacionesPendientes() {
+            const container = document.getElementById('invitaciones-pendientes-container');
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+
+            try {
+                const response = await fetch(baseUrl + '/api/invitaciones-pendientes', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (data.invitaciones.length === 0) {
+                        container.innerHTML = '<div class="alert alert-info">📭 No tienes invitaciones pendientes</div>';
+                    } else {
+                        let html = '<div class="row g-3">';
+                        data.invitaciones.forEach(inv => {
+                            html += `
+                                <div class="col-md-6">
+                                    <div class="card border-warning shadow-sm">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                                     style="width:50px;height:50px;font-size:24px">
+                                                    ${inv.remitente.nombre.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-0 fw-bold">${inv.remitente.nombre}</h6>
+                                                    <small class="text-muted">${inv.remitente.correo}</small>
+                                                    <div class="small text-muted mt-1">
+                                                        ${new Date(inv.fechaCreacion).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="text-muted small mb-3">Te ha enviado una invitación para chatear</p>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-success btn-sm flex-grow-1" 
+                                                        onclick="aceptarInvitacion(${inv.id}, '${inv.remitente.nombre}')">
+                                                    ✓ Aceptar
+                                                </button>
+                                                <button class="btn btn-danger btn-sm flex-grow-1" 
+                                                        onclick="rechazarInvitacion(${inv.id})">
+                                                    ✗ Rechazar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        container.innerHTML = html;
+                    }
+                } else {
+                    container.innerHTML = `<div class="alert alert-warning">⚠️ ${data.error || 'Error al cargar invitaciones'}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Aceptar invitación
+        async function aceptarInvitacion(salaId, nombreRemitente) {
+            try {
+                const response = await fetch(baseUrl + `/api/invitacion/${salaId}/aceptar`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showMessage(`✓ Invitación aceptada`, 'success');
+                    // Actualizar listas
+                    await cargarInvitacionesPendientes();
+                    await cargarSalasPrivadas();
+                    // Abrir la sala automáticamente
+                    if (data.sala) {
+                        // Pequeño delay para asegurar que las listas se actualicen
+                        setTimeout(() => {
+                            abrirSalaPrivada(data.sala.id, data.sala.nombre, data.sala.participantes);
+                        }, 300);
+                    }
+                } else {
+                    showMessage('⚠️ ' + (data.error || 'Error al aceptar invitación'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        // Rechazar invitación
+        async function rechazarInvitacion(salaId) {
+            if (!confirm('¿Estás seguro de rechazar esta invitación?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(baseUrl + `/api/invitacion/${salaId}/rechazar`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showMessage('✓ Invitación rechazada', 'success');
+                    cargarInvitacionesPendientes();
+                } else {
+                    showMessage('⚠️ ' + (data.error || 'Error al rechazar invitación'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        // Cargar salas privadas del usuario
+        async function cargarSalasPrivadas() {
+            const seccionSalas = document.getElementById('seccion-salas-privadas');
+            const container = document.getElementById('salas-privadas-container');
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+
+            try {
+                const response = await fetch(baseUrl + '/api/salas-privadas', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (data.salas.length === 0) {
+                        // Ocultar la sección completa si no hay salas
+                        seccionSalas.style.display = 'none';
+                    } else {
+                        // Mostrar la sección si hay salas
+                        seccionSalas.style.display = 'block';
+                        let html = '<div class="row g-3">';
+                        data.salas.forEach(sala => {
+                            const otroUsuario = sala.otroUsuario;
+                            html += `
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                                     style="width:50px;height:50px;font-size:24px">
+                                                    ${otroUsuario ? otroUsuario.nombre.charAt(0).toUpperCase() : '?'}
+                                                </div>
+                                                <div class="flex-grow-1" style="cursor: pointer;" 
+                                                     onclick="abrirSalaPrivada(${sala.id}, '${sala.nombre}', ${JSON.stringify(sala.participantes).replace(/"/g, '&quot;')})">
+                                                    <h6 class="mb-0 fw-bold">${otroUsuario ? otroUsuario.nombre : 'Usuario desconocido'}</h6>
+                                                    <small class="text-muted">Chat privado</small>
+                                                </div>
+                                                <span class="badge bg-success me-2">🔒</span>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-primary flex-grow-1" 
+                                                        onclick="abrirSalaPrivada(${sala.id}, '${sala.nombre}', ${JSON.stringify(sala.participantes).replace(/"/g, '&quot;')})">
+                                                    💬 Abrir Chat
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" 
+                                                        onclick="eliminarSalaPrivada(${sala.id}, '${otroUsuario ? otroUsuario.nombre : 'este usuario'}', event)">
+                                                    🗑️ Eliminar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        container.innerHTML = html;
+                    }
+                } else {
+                    // Ocultar la sección si hay error
+                    seccionSalas.style.display = 'none';
+                }
+            } catch (error) {
+                // Ocultar la sección si hay error
+                seccionSalas.style.display = 'none';
+            }
+        }
+
+        // Eliminar sala privada
+        async function eliminarSalaPrivada(salaId, nombreUsuario, event) {
+            // Evitar que se propague el click y abra el chat
+            if (event) {
+                event.stopPropagation();
+            }
+
+            if (!confirm(`¿Estás seguro de eliminar el chat con ${nombreUsuario}? Esta acción no se puede deshacer.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(baseUrl + `/api/sala-privada/${salaId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showMessage('✓ Chat eliminado correctamente', 'success');
+                    
+                    // Si estamos en el chat que se eliminó, cerrarlo
+                    if (salaPrivadaActual === salaId) {
+                        cerrarChatPrivado();
+                    }
+                    
+                    // Recargar la lista de salas
+                    cargarSalasPrivadas();
+                } else {
+                    showMessage('⚠️ ' + (data.error || 'Error al eliminar el chat'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        // Abrir una sala privada
+        function abrirSalaPrivada(salaId, nombreSala, participantes) {
+            salaPrivadaActual = salaId;
+            
+            // Mostrar la sección de chat privado
+            document.getElementById('chat-privado-section').style.display = 'block';
+            document.getElementById('nombre-sala-privada').textContent = nombreSala;
+            
+            // Mostrar participantes
+            const nombresParticipantes = participantes.map(p => p.nombre).join(', ');
+            document.getElementById('participantes-sala-privada').textContent = `Participantes: ${nombresParticipantes}`;
+            
+            // Cargar mensajes
+            cargarMensajesSalaPrivada();
+
+            // Scroll hacia el chat privado
+            document.getElementById('chat-privado-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Cerrar chat privado
+        function cerrarChatPrivado() {
+            salaPrivadaActual = null;
+            document.getElementById('chat-privado-section').style.display = 'none';
+        }
+
+        // Cargar mensajes de sala privada
+        async function cargarMensajesSalaPrivada() {
+            if (!salaPrivadaActual) return;
+
+            const container = document.getElementById('chat-privado-mensajes-container');
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+
+            try {
+                const response = await fetch(baseUrl + `/api/sala-privada/${salaPrivadaActual}/mensajes`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Respuesta no válida del servidor');
+                }
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (data.mensajes.length === 0) {
+                        container.innerHTML = '<div class="alert alert-info mb-0">💬 No hay mensajes aún. ¡Envía el primero!</div>';
+                    } else {
+                        let html = '';
+                        data.mensajes.forEach(msg => {
+                            const esMio = msg.autor.id === currentUser.id;
+                            const alignClass = esMio ? 'text-end' : 'text-start';
+                            const bgClass = esMio ? 'bg-success text-white' : 'bg-white';
+
+                            html += `
+                                <div class="${alignClass} mb-3">
+                                    <div class="d-inline-block ${bgClass} rounded p-2 shadow-sm" style="max-width: 70%;">
+                                        <div class="fw-bold small">${msg.autor.nombre}</div>
+                                        <div>${msg.contenido}</div>
+                                        <div class="small opacity-75">${new Date(msg.fechaCreacion).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        container.innerHTML = html;
+                        container.scrollTop = container.scrollHeight;
+                    }
+                } else {
+                    // Si hay error, cerrar el chat y mostrar mensaje
+                    const errorMsg = data.error || 'Error al cargar mensajes';
+                    cerrarChatPrivado();
+                    showMessage('⚠️ ' + errorMsg, 'error');
+                }
+            } catch (error) {
+                // Si hay error de conexión, cerrar el chat y mostrar mensaje
+                cerrarChatPrivado();
+                showMessage('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        // Enviar mensaje a sala privada
+        async function enviarMensajePrivado() {
+            if (!salaPrivadaActual) return;
+
+            const input = document.getElementById('mensaje-privado-input');
+            const contenido = input.value.trim();
+
+            if (!contenido) {
+                showMessage('⚠️ El mensaje no puede estar vacío', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(baseUrl + `/api/sala-privada/${salaPrivadaActual}/mensaje`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ contenido })
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Respuesta no válida del servidor');
+                }
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    input.value = '';
+                    await cargarMensajesSalaPrivada();
+                } else {
+                    showMessage('⚠️ ' + (data.error || 'Error al enviar mensaje'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Error al enviar mensaje: ' + error.message, 'error');
+            }
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
