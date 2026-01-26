@@ -39,6 +39,7 @@ class ApiAuthController extends AbstractController
 
         if (!isset($data['correo']) || !isset($data['password'])) {
             return $this->json([
+                'success' => false,
                 'error' => 'Se requieren correo y password'
             ], Response::HTTP_BAD_REQUEST);
         }
@@ -48,6 +49,7 @@ class ApiAuthController extends AbstractController
 
         if (!$user) {
             return $this->json([
+                'success' => false,
                 'error' => 'Credenciales inválidas'
             ], Response::HTTP_UNAUTHORIZED);
         }
@@ -55,6 +57,7 @@ class ApiAuthController extends AbstractController
         // Verificar contraseña
         if (!$this->passwordHasher->isPasswordValid($user, $data['password'])) {
             return $this->json([
+                'success' => false,
                 'error' => 'Credenciales inválidas'
             ], Response::HTTP_UNAUTHORIZED);
         }
@@ -128,6 +131,7 @@ class ApiAuthController extends AbstractController
         // Validar datos
         if (!isset($data['nombre']) || !isset($data['correo']) || !isset($data['password'])) {
             return $this->json([
+                'success' => false,
                 'error' => 'Se requieren nombre, correo y password'
             ], Response::HTTP_BAD_REQUEST);
         }
@@ -136,6 +140,7 @@ class ApiAuthController extends AbstractController
         $existingUser = $this->userRepository->findOneBy(['correo' => $data['correo']]);
         if ($existingUser) {
             return $this->json([
+                'success' => false,
                 'error' => 'El correo ya está registrado'
             ], Response::HTTP_CONFLICT);
         }
@@ -178,6 +183,7 @@ class ApiAuthController extends AbstractController
 
         if (!$user instanceof User) {
             return $this->json([
+                'success' => false,
                 'error' => 'No autenticado'
             ], Response::HTTP_UNAUTHORIZED);
         }
@@ -185,6 +191,7 @@ class ApiAuthController extends AbstractController
         // Verificar que el usuario esté activo
         if (!$user->isEstado()) {
             return $this->json([
+                'success' => false,
                 'error' => 'Usuario inactivo'
             ], Response::HTTP_FORBIDDEN);
         }
@@ -205,19 +212,25 @@ class ApiAuthController extends AbstractController
     /**
      * Actualizar ubicación - Actualiza las coordenadas del usuario autenticado
      */
-    #[Route('/actualizar-ubicacion', name: 'api_actualizar_ubicacion', methods: ['POST'])]
+    #[Route('/actualizar', name: 'api_actualizar_ubicacion', methods: ['POST'])]
     public function actualizarUbicacion(Request $request): JsonResponse
     {
         $user = $this->getUser();
 
         if (!$user instanceof User || !$user->isEstado()) {
-            return $this->json(['error' => 'No autenticado'], Response::HTTP_UNAUTHORIZED);
+            return $this->json([
+                'success' => false,
+                'error' => 'No autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
         }
 
         $data = json_decode($request->getContent(), true);
 
         if (!isset($data['latitud']) || !isset($data['longitud'])) {
-            return $this->json(['error' => 'Se requieren latitud y longitud'], Response::HTTP_BAD_REQUEST);
+            return $this->json([
+                'success' => false,
+                'error' => 'Se requieren latitud y longitud'
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         $user->setLatitud($data['latitud']);
@@ -243,7 +256,10 @@ class ApiAuthController extends AbstractController
         $user = $this->getUser();
 
         if (!$user instanceof User || !$user->isEstado()) {
-            return $this->json(['error' => 'No autenticado'], Response::HTTP_UNAUTHORIZED);
+            return $this->json([
+                'success' => false,
+                'error' => 'No autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
         }
 
         // Obtener TODOS los usuarios activos (excepto el actual)
@@ -303,7 +319,10 @@ class ApiAuthController extends AbstractController
         $user = $this->getUser();
 
         if (!$user instanceof User || !$user->isEstado()) {
-            return $this->json(['error' => 'No autenticado'], Response::HTTP_UNAUTHORIZED);
+            return $this->json([
+                'success' => false,
+                'error' => 'No autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
         }
 
         // Obtener TODOS los usuarios activos (excepto el actual)
