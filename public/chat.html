@@ -824,8 +824,27 @@
         }
 
         // Logout
-        function logout() {
+        async function logout() {
             if (messagesInterval) clearInterval(messagesInterval);
+            
+            // Llamar al endpoint de logout para eliminar conversaciones
+            if (authToken) {
+                try {
+                    const response = await fetch(`${API_BASE}/logout`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.salasPrivadasEliminadas > 0) {
+                        console.log(`Se eliminaron ${data.salasPrivadasEliminadas} conversaciones privadas`);
+                    }
+                } catch (error) {
+                    console.error('Error al cerrar sesión:', error);
+                }
+            }
+            
             authToken = '';
             currentUser = null;
             document.getElementById('chatContainer').classList.add('hidden');

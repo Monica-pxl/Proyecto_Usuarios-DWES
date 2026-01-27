@@ -93,7 +93,7 @@ class ApiAuthController extends AbstractController
     }
 
     /**
-     * Logout endpoint - Invalida el token
+     * Logout endpoint - Invalida el token y elimina conversaciones privadas
      */
     #[Route('/logout', name: 'api_logout', methods: ['POST'])]
     public function logout(Request $request): JsonResponse
@@ -106,17 +106,43 @@ class ApiAuthController extends AbstractController
             ], Response::HTTP_UNAUTHORIZED);
         }
 
+        // Buscar todas las salas privadas del usuario
+        $salasPrivadas = $this->salaRepository->createQueryBuilder('s')
+            ->innerJoin('s.usuarios', 'u')
+            ->where('u.id = :userId')
+            ->andWhere('s.tipo = :tipo')
+            ->setParameter('userId', $user->getId())
+            ->setParameter('tipo', 'privada')
+            ->getQuery()
+            ->getResult();
+
+        // Eliminar todas las salas privadas y sus mensajes
+        $salasEliminadas = 0;
+        foreach ($salasPrivadas as $sala) {
+            // Eliminar mensajes de la sala
+            $mensajes = $this->mensageRepository->findBy(['sala' => $sala]);
+            foreach ($mensajes as $mensaje) {
+                $this->entityManager->remove($mensaje);
+            }
+            
+            // Eliminar la sala
+            $this->entityManager->remove($sala);
+            $salasEliminadas++;
+        }
+
         // Marcar estado = false y limpiar token y ubicación
         $user->setEstado(false);
         $user->setTokenAutenticacion(null);
         $user->setLatitud(null);
         $user->setLongitud(null);
         $user->setFechaActualizacionUbicacion(null);
+        
         $this->entityManager->flush();
 
         return $this->json([
             'success' => true,
-            'message' => 'Sesión cerrada correctamente'
+            'message' => 'Sesión cerrada correctamente',
+            'salasPrivadasEliminadas' => $salasEliminadas
         ]);
     }
 
