@@ -84,10 +84,12 @@ class ApiAuthController extends AbstractController
         return $this->json([
             'success' => true,
             'token' => $token,
-            'user' => [
+            'data' => [
                 'id' => $user->getId(),
-                'correo' => $user->getCorreo(),
-                'nombre' => $user->getNombre()
+                'user' => [
+                    'nombre' => $user->getNombre(),
+                    'correo' => $user->getCorreo()
+                ]
             ]
         ]);
     }
@@ -116,18 +118,43 @@ class ApiAuthController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        // Eliminar todas las salas privadas y sus mensajes
+        // Procesar cada sala privada
         $salasEliminadas = 0;
         foreach ($salasPrivadas as $sala) {
-            // Eliminar mensajes de la sala
-            $mensajes = $this->mensageRepository->findBy(['sala' => $sala]);
+            // Eliminar todos los mensajes del usuario en esta sala
+            $mensajes = $this->mensageRepository->createQueryBuilder('m')
+                ->where('m.sala = :sala')
+                ->andWhere('m.autor = :usuario')
+                ->setParameter('sala', $sala)
+                ->setParameter('usuario', $user)
+                ->getQuery()
+                ->getResult();
+
             foreach ($mensajes as $mensaje) {
                 $this->entityManager->remove($mensaje);
             }
-            
-            // Eliminar la sala
-            $this->entityManager->remove($sala);
-            $salasEliminadas++;
+
+            // Verificar si hay otros usuarios activos en la sala
+            $otrosUsuariosActivos = false;
+            foreach ($sala->getUsuarios() as $participante) {
+                if ($participante->getId() !== $user->getId() && $participante->isEstado()) {
+                    $otrosUsuariosActivos = true;
+                    break;
+                }
+            }
+
+            // Si no hay otros usuarios activos, eliminar toda la sala
+            if (!$otrosUsuariosActivos) {
+                // Eliminar todos los mensajes restantes de la sala
+                $mensajesRestantes = $this->mensageRepository->findBy(['sala' => $sala]);
+                foreach ($mensajesRestantes as $mensaje) {
+                    $this->entityManager->remove($mensaje);
+                }
+
+                // Eliminar la sala
+                $this->entityManager->remove($sala);
+                $salasEliminadas++;
+            }
         }
 
         // Marcar estado = false y limpiar token y ubicación
@@ -136,7 +163,7 @@ class ApiAuthController extends AbstractController
         $user->setLatitud(null);
         $user->setLongitud(null);
         $user->setFechaActualizacionUbicacion(null);
-        
+
         $this->entityManager->flush();
 
         return $this->json([
@@ -198,12 +225,14 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'message' => 'Usuario registrado e iniciado sesión exitosamente',
+            'message' => 'Usuario registrado exitosamente',
             'token' => $token,
-            'user' => [
-                'id' => $user->getId(),
-                'nombre' => $user->getNombre(),
-                'correo' => $user->getCorreo()
+            'data' => [
+                'token' => $user->getId(),
+                'user' => [
+                    'nombre' => $user->getNombre(),
+                    'correo' => $user->getCorreo()
+                ]
             ]
         ], Response::HTTP_CREATED);
     }
@@ -234,13 +263,16 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'user' => [
-                'id' => $user->getId(),
-                'nombre' => $user->getNombre(),
-                'correo' => $user->getCorreo(),
-                'estado' => $user->isEstado(),
-                'latitud' => $user->getLatitud(),
-                'longitud' => $user->getLongitud()
+            'data' => [
+                'token' => $user->getId(),
+                'usuario' => [
+                    'id' => $user->getId(),
+                    'nombre' => $user->getNombre(),
+                    'correo' => $user->getCorreo(),
+                    'estado' => $user->isEstado(),
+                    'latitud' => $user->getLatitud(),
+                    'longitud' => $user->getLongitud()
+                ]
             ]
         ]);
     }
@@ -340,8 +372,12 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'usuariosCercanos' => $usuariosCercanos,
-            'total' => count($usuariosCercanos)
+            'message' => 'Asi compruebas que vaya',
+            'data' => [
+                'token' => $user->getId(),
+                'usuarios' => $usuariosCercanos,
+                'total' => count($usuariosCercanos)
+            ]
         ]);
     }
 
@@ -405,8 +441,10 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'usuarios' => $todosUsuarios,
-            'total' => count($todosUsuarios)
+            'data' => [
+                'usuarios' => $todosUsuarios,
+                'total' => count($todosUsuarios)
+            ]
         ]);
     }
 
@@ -478,8 +516,15 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'mensajes' => $mensajesFormateados,
-            'total' => count($mensajesFormateados)
+            'data' => [
+                'token' => $user->getId(),
+                'geolocalizacion' => [
+                    'latitud' => $user->getLatitud(),
+                    'longitud' => $user->getLongitud()
+                ],
+                'mensajes' => $mensajesFormateados,
+                'total' => count($mensajesFormateados)
+            ]
         ]);
     }
 
@@ -532,13 +577,16 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'mensaje' => [
-                'id' => $mensaje->getId(),
-                'contenido' => $mensaje->getContenido(),
-                'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
-                'autor' => [
-                    'id' => $user->getId(),
-                    'nombre' => $user->getNombre()
+            'message' => 'Mensaje enviado correctamente',
+            'data' => [
+                'mensaje' => [
+                    'id' => $mensaje->getId(),
+                    'contenido' => $mensaje->getContenido(),
+                    'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
+                    'autor' => [
+                        'token' => $user->getId(),
+                        'nombre' => $user->getNombre()
+                    ]
                 ]
             ]
         ], Response::HTTP_CREATED);
@@ -629,7 +677,7 @@ class ApiAuthController extends AbstractController
         $sala->setActiva(false); // Pendiente de aceptación
         $sala->setCreador($user); // Quien envía la invitación
         $sala->setFechaCreacion(new \DateTime());
-        
+
         // Agregar ambos usuarios a la sala
         $sala->addUsuario($user);
         $sala->addUsuario($otroUsuario);
@@ -697,8 +745,10 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'invitaciones' => $invitacionesFormateadas,
-            'total' => count($invitacionesFormateadas)
+            'data' => [
+                'invitaciones' => $invitacionesFormateadas,
+                'total' => count($invitacionesFormateadas)
+            ]
         ]);
     }
 
@@ -753,16 +803,18 @@ class ApiAuthController extends AbstractController
         return $this->json([
             'success' => true,
             'message' => 'Invitación aceptada',
-            'sala' => [
-                'id' => $sala->getId(),
-                'nombre' => $sala->getNombre(),
-                'tipo' => $sala->getTipo(),
-                'participantes' => array_map(function($u) {
-                    return [
-                        'id' => $u->getId(),
-                        'nombre' => $u->getNombre()
-                    ];
-                }, $sala->getUsuarios()->toArray())
+            'data' => [
+                'sala' => [
+                    'id' => $sala->getId(),
+                    'nombre' => $sala->getNombre(),
+                    'tipo' => $sala->getTipo(),
+                    'participantes' => array_map(function($u) {
+                        return [
+                            'id' => $u->getId(),
+                            'nombre' => $u->getNombre()
+                        ];
+                    }, $sala->getUsuarios()->toArray())
+                ]
             ]
         ]);
     }
@@ -878,8 +930,10 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'salas' => $salasFormateadas,
-            'total' => count($salasFormateadas)
+            'data' => [
+                'salas' => $salasFormateadas,
+                'total' => count($salasFormateadas)
+            ]
         ]);
     }
 
@@ -914,10 +968,20 @@ class ApiAuthController extends AbstractController
             ], Response::HTTP_FORBIDDEN);
         }
 
-        // Obtener mensajes de la sala
+        // Registrar acceso del usuario si es la primera vez que abre este chat
+        $fechaAcceso = $sala->obtenerFechaAcceso($user->getId());
+        if (!$fechaAcceso) {
+            $sala->registrarAcceso($user->getId());
+            $this->entityManager->flush();
+            $fechaAcceso = new \DateTime();
+        }
+
+        // Obtener mensajes de la sala SOLO desde que el usuario accedió
         $mensajes = $this->mensageRepository->createQueryBuilder('m')
             ->where('m.sala = :sala')
+            ->andWhere('m.fechaCreacion >= :fechaAcceso')
             ->setParameter('sala', $sala)
+            ->setParameter('fechaAcceso', $fechaAcceso)
             ->orderBy('m.fechaCreacion', 'ASC')
             ->getQuery()
             ->getResult();
@@ -938,10 +1002,12 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'mensajes' => $mensajesFormateados,
-            'sala' => [
-                'id' => $sala->getId(),
-                'nombre' => $sala->getNombre()
+            'data' => [
+                'mensajes' => $mensajesFormateados,
+                'sala' => [
+                    'id' => $sala->getId(),
+                    'nombre' => $sala->getNombre()
+                ]
             ]
         ]);
     }
@@ -998,20 +1064,23 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'mensaje' => [
-                'id' => $mensaje->getId(),
-                'contenido' => $mensaje->getContenido(),
-                'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
-                'autor' => [
-                    'id' => $user->getId(),
-                    'nombre' => $user->getNombre()
+            'message' => 'Mensaje enviado correctamente',
+            'data' => [
+                'mensaje' => [
+                    'id' => $mensaje->getId(),
+                    'contenido' => $mensaje->getContenido(),
+                    'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
+                    'autor' => [
+                        'id' => $user->getId(),
+                        'nombre' => $user->getNombre()
+                    ]
                 ]
             ]
         ], Response::HTTP_CREATED);
     }
 
     /**
-     * Eliminar sala privada
+     * Salir de sala privada (eliminar mensajes del usuario y sala si no quedan usuarios)
      * DELETE /api/sala-privada/{salaId}
      */
     #[Route('/sala-privada/{salaId}', name: 'api_eliminar_sala_privada', methods: ['DELETE'])]
@@ -1048,19 +1117,303 @@ class ApiAuthController extends AbstractController
             ], Response::HTTP_FORBIDDEN);
         }
 
-        // Eliminar todos los mensajes de la sala primero
-        $mensajes = $this->mensageRepository->findBy(['sala' => $sala]);
+        // Eliminar todos los mensajes del usuario en esta sala
+        $mensajes = $this->mensageRepository->createQueryBuilder('m')
+            ->where('m.sala = :sala')
+            ->andWhere('m.autor = :usuario')
+            ->setParameter('sala', $sala)
+            ->setParameter('usuario', $user)
+            ->getQuery()
+            ->getResult();
+
         foreach ($mensajes as $mensaje) {
             $this->entityManager->remove($mensaje);
         }
 
-        // Eliminar la sala
-        $this->entityManager->remove($sala);
+        // Verificar si hay otros usuarios activos en la sala
+        $otrosUsuariosActivos = false;
+        foreach ($sala->getUsuarios() as $participante) {
+            if ($participante->getId() !== $user->getId() && $participante->isEstado()) {
+                $otrosUsuariosActivos = true;
+                break;
+            }
+        }
+
+        // Si no hay otros usuarios activos, eliminar toda la sala
+        if (!$otrosUsuariosActivos) {
+            // Eliminar todos los mensajes restantes de la sala
+            $mensajesRestantes = $this->mensageRepository->findBy(['sala' => $sala]);
+            foreach ($mensajesRestantes as $mensaje) {
+                $this->entityManager->remove($mensaje);
+            }
+
+            // Eliminar la sala
+            $this->entityManager->remove($sala);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Has salido del chat. La sala fue eliminada porque no quedan usuarios activos.'
+            ]);
+        }
+
+        // Si hay otros usuarios, solo eliminamos los mensajes del usuario actual
         $this->entityManager->flush();
 
         return $this->json([
             'success' => true,
-            'message' => 'Sala eliminada correctamente'
+            'message' => 'Tus mensajes han sido eliminados de esta sala'
+        ]);
+    }
+
+    /**
+     * Cambiar chat de sala privada
+     * POST /api/privado/cambiarchat
+     */
+    #[Route('/privado/cambiarchat', name: 'api_cambiar_chat_privado', methods: ['POST'])]
+    public function cambiarChatPrivado(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['sala_id'])) {
+            return $this->json([
+                'success' => false,
+                'error' => 'El ID de la sala es requerido'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Buscar la sala
+        $sala = $this->salaRepository->find($data['sala_id']);
+
+        if (!$sala) {
+            return $this->json([
+                'success' => false,
+                'error' => 'La sala especificada no existe'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verificar que el usuario sea participante de la sala
+        if (!$sala->getUsuarios()->contains($user)) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No tienes acceso a esta sala'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Sala cambiada correctamente',
+            'data' => [
+                'sala' => [
+                    'id' => $sala->getId(),
+                    'nombre' => $sala->getNombre()
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Salir de una sala privada
+     * POST /api/privado/salir
+     */
+    #[Route('/privado/salir', name: 'api_salir_sala_privada', methods: ['POST'])]
+    public function salirSalaPrivada(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['sala_id'])) {
+            return $this->json([
+                'success' => false,
+                'error' => 'El ID de la sala es requerido'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Buscar la sala
+        $sala = $this->salaRepository->find($data['sala_id']);
+
+        if (!$sala) {
+            return $this->json([
+                'success' => false,
+                'error' => 'La sala especificada no existe'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verificar que el usuario sea participante de la sala
+        if (!$sala->getUsuarios()->contains($user)) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No puedes salir de una sala en la que no participas'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Eliminar mensajes del usuario en esta sala
+        $mensajes = $this->mensageRepository->createQueryBuilder('m')
+            ->where('m.sala = :sala')
+            ->andWhere('m.autor = :usuario')
+            ->setParameter('sala', $sala)
+            ->setParameter('usuario', $user)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($mensajes as $mensaje) {
+            $this->entityManager->remove($mensaje);
+        }
+
+        // Verificar si hay otros usuarios activos
+        $otrosUsuariosActivos = false;
+        foreach ($sala->getUsuarios() as $participante) {
+            if ($participante->getId() !== $user->getId() && $participante->isEstado()) {
+                $otrosUsuariosActivos = true;
+                break;
+            }
+        }
+
+        // Si no hay otros usuarios activos, eliminar la sala
+        if (!$otrosUsuariosActivos) {
+            $mensajesRestantes = $this->mensageRepository->findBy(['sala' => $sala]);
+            foreach ($mensajesRestantes as $mensaje) {
+                $this->entityManager->remove($mensaje);
+            }
+            $this->entityManager->remove($sala);
+        }
+
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Has salido de la sala correctamente',
+            'data' => [
+                'sala' => [
+                    'id' => $sala->getId(),
+                    'nombre' => $sala->getNombre()
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Lista de salas privadas
+     * GET /api/privado
+     */
+    #[Route('/privado', name: 'api_listar_privado', methods: ['GET'])]
+    public function listarSalasPrivadas(): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Obtener salas privadas del usuario
+        $salas = $this->salaRepository->createQueryBuilder('s')
+            ->innerJoin('s.usuarios', 'u')
+            ->where('u.id = :userId')
+            ->andWhere('s.tipo = :tipo')
+            ->andWhere('s.activa = :activa')
+            ->setParameter('userId', $user->getId())
+            ->setParameter('tipo', 'privada')
+            ->setParameter('activa', true)
+            ->orderBy('s.fechaCreacion', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        $salasFormateadas = [];
+        foreach ($salas as $sala) {
+            $usuarios = [];
+            foreach ($sala->getUsuarios() as $participante) {
+                $usuarios[] = [
+                    'id' => $participante->getId(),
+                    'nombre' => $participante->getNombre()
+                ];
+            }
+
+            $salasFormateadas[] = [
+                'id' => $sala->getId(),
+                'nombre' => $sala->getNombre(),
+                'usuarios' => $usuarios
+            ];
+        }
+
+        return $this->json([
+            'success' => true,
+            'data' => [
+                'salas' => $salasFormateadas,
+                'total' => count($salasFormateadas)
+            ]
+        ]);
+    }
+
+    /**
+     * Gestión de mensajes - Eliminar mensaje
+     * DELETE /api/mensaje
+     */
+    #[Route('/mensaje', name: 'api_eliminar_mensaje', methods: ['DELETE'])]
+    public function eliminarMensaje(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['mensaje_id'])) {
+            return $this->json([
+                'success' => false,
+                'error' => 'El ID del mensaje es requerido'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Buscar el mensaje
+        $mensaje = $this->mensageRepository->find($data['mensaje_id']);
+
+        if (!$mensaje) {
+            return $this->json([
+                'success' => false,
+                'error' => 'El mensaje no existe'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verificar que el mensaje sea del usuario
+        if ($mensaje->getAutor()->getId() !== $user->getId()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No puedes eliminar un mensaje que no es tuyo'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Eliminar el mensaje
+        $this->entityManager->remove($mensaje);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Mensaje eliminado correctamente'
         ]);
     }
 }

@@ -31,6 +31,9 @@ class Sala
     #[ORM\JoinColumn(nullable: true)]
     private ?User $creador = null;
 
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $accesosUsuarios = [];
+
     /**
      * @var Collection<int, User>
      */
@@ -112,6 +115,40 @@ class Sala
         $this->creador = $creador;
 
         return $this;
+    }
+
+    public function getAccesosUsuarios(): ?array
+    {
+        return $this->accesosUsuarios ?? [];
+    }
+
+    public function setAccesosUsuarios(?array $accesosUsuarios): static
+    {
+        $this->accesosUsuarios = $accesosUsuarios;
+
+        return $this;
+    }
+
+    public function registrarAcceso(int $usuarioId): static
+    {
+        if (!$this->accesosUsuarios) {
+            $this->accesosUsuarios = [];
+        }
+
+        $this->accesosUsuarios[$usuarioId] = (new \DateTime())->format('Y-m-d H:i:s');
+
+        return $this;
+    }
+
+    public function obtenerFechaAcceso(int $usuarioId): ?\DateTime
+    {
+        $accesos = $this->getAccesosUsuarios();
+
+        if (isset($accesos[$usuarioId])) {
+            return new \DateTime($accesos[$usuarioId]);
+        }
+
+        return null;
     }
 
     /**

@@ -237,7 +237,7 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    currentUser = data.user;
+                    currentUser = data.data?.usuario;
                     displayUserData(currentUser);
 
                     // Verificar si necesita actualizar ubicación
@@ -317,11 +317,12 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    if (data.usuariosCercanos.length === 0) {
+                    const usuariosCercanos = data.data?.usuarios || [];
+                    if (usuariosCercanos.length === 0) {
                         container.innerHTML = '<div class="alert alert-info">📍 No hay usuarios activos a menos de 5 km</div>';
                     } else {
                         let html = '<div class="row g-3">';
-                        data.usuariosCercanos.forEach(u => {
+                        usuariosCercanos.forEach(u => {
                             html += `
                                 <div class="col-md-6 col-lg-4">
                                     <div class="card border-0 shadow-sm">
@@ -344,7 +345,7 @@
                                 </div>
                             `;
                         });
-                        html += '</div><div class="alert alert-success mt-3 mb-0">✓ ${data.total} usuario(s) cercano(s)</div>';
+                        html += '</div><div class="alert alert-success mt-3 mb-0">✓ ${data.data?.total || 0} usuario(s) cercano(s)</div>';
                         container.innerHTML = html;
                     }
                 } else {
@@ -417,20 +418,21 @@
                 if (response.ok && data.success) {
                     const lista = document.getElementById('usuarios-conectados-lista');
                     const count = document.getElementById('usuarios-conectados-count');
-                    
-                    count.textContent = data.total;
-                    
-                    if (data.usuarios.length === 0) {
+                    const usuarios = data.data?.usuarios || [];
+
+                    count.textContent = data.data?.total || 0;
+
+                    if (usuarios.length === 0) {
                         lista.textContent = 'Solo tú estás conectado';
                     } else {
                         // Mostrar solo los primeros 5 nombres
-                        const nombres = data.usuarios.slice(0, 5).map(u => u.nombre);
+                        const nombres = usuarios.slice(0, 5).map(u => u.nombre);
                         let texto = nombres.join(', ');
-                        
-                        if (data.usuarios.length > 5) {
-                            texto += ` y ${data.usuarios.length - 5} más`;
+
+                        if (usuarios.length > 5) {
+                            texto += ` y ${usuarios.length - 5} más`;
                         }
-                        
+
                         lista.textContent = texto;
                     }
                 } else {
@@ -444,7 +446,7 @@
 
         async function cargarMensajesGenerales() {
             const container = document.getElementById('chat-mensajes-container');
-            
+
             // Solo mostrar spinner en la primera carga
             if (ultimoMensajeId === 0) {
                 container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
@@ -456,15 +458,17 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const usuariosData = await usuariosResponse.json();
+                let usuarios = [];
 
                 // Detectar usuarios que se desconectaron
                 if (usuariosResponse.ok && usuariosData.success) {
-                    const idsActuales = usuariosData.usuarios.map(u => u.id);
+                    usuarios = usuariosData.data?.usuarios || [];
+                    const idsActuales = usuarios.map(u => u.id);
                     const idsAnteriores = usuariosConectadosAntes.map(u => u.id);
-                    
+
                     // Encontrar usuarios que se desconectaron
                     const desconectados = usuariosConectadosAntes.filter(u => !idsActuales.includes(u.id));
-                    
+
                     // Mostrar mensaje de desconexión
                     desconectados.forEach(usuario => {
                         const mensajeDesconexion = `
@@ -479,10 +483,10 @@
                             container.insertAdjacentHTML('beforeend', mensajeDesconexion);
                         }
                     });
-                    
+
                     // Encontrar usuarios que se conectaron
-                    const conectados = usuariosData.usuarios.filter(u => !idsAnteriores.includes(u.id));
-                    
+                    const conectados = usuarios.filter(u => !idsAnteriores.includes(u.id));
+
                     // Mostrar mensaje de conexión
                     conectados.forEach(usuario => {
                         const mensajeConexion = `
@@ -497,9 +501,9 @@
                             container.insertAdjacentHTML('beforeend', mensajeConexion);
                         }
                     });
-                    
+
                     // Actualizar lista de usuarios anteriores
-                    usuariosConectadosAntes = usuariosData.usuarios;
+                    usuariosConectadosAntes = usuarios;
                 }
 
                 // Luego cargar mensajes
@@ -516,13 +520,14 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
+                    const mensajes = data.data?.mensajes || [];
                     // Si es la primera carga, limpiar el spinner
                     if (ultimoMensajeId === 0) {
                         container.innerHTML = '';
-                        
+
                         // Mostrar usuarios actualmente conectados solo en la primera carga
-                        if (usuariosResponse.ok && usuariosData.success && usuariosData.usuarios.length > 0) {
-                            const usuariosConectados = usuariosData.usuarios.slice(0, 3);
+                        if (usuariosResponse.ok && usuariosData.success && usuarios.length > 0) {
+                            const usuariosConectados = usuarios.slice(0, 3);
                             usuariosConectados.forEach(usuario => {
                                 const html = `
                                     <div class="text-center mb-2">
@@ -534,22 +539,22 @@
                                 `;
                                 container.insertAdjacentHTML('beforeend', html);
                             });
-                            if (usuariosData.usuarios.length > 3) {
+                            if (usuarios.length > 3) {
                                 const html = `
                                     <div class="text-center mb-3">
-                                        <small class="text-muted">y ${usuariosData.usuarios.length - 3} usuario(s) más conectado(s)</small>
+                                        <small class="text-muted">y ${usuarios.length - 3} usuario(s) más conectado(s)</small>
                                     </div>
                                 `;
                                 container.insertAdjacentHTML('beforeend', html);
                             }
                         }
                     }
-                    
-                    if (data.mensajes.length === 0 && ultimoMensajeId === 0) {
+
+                    if (mensajes.length === 0 && ultimoMensajeId === 0) {
                         container.insertAdjacentHTML('beforeend', '<div class="alert alert-info mb-0 text-center">💬 No hay mensajes aún. ¡Sé el primero en escribir!</div>');
                     } else {
                         // Solo agregar mensajes nuevos
-                        data.mensajes.forEach(msg => {
+                        mensajes.forEach(msg => {
                             if (!mensajesMostrados.has(msg.id)) {
                                 mensajesMostrados.add(msg.id);
                                 const esMio = msg.autor.id === currentUser.id;
@@ -566,7 +571,7 @@
                                     </div>
                                 `;
                                 container.insertAdjacentHTML('beforeend', html);
-                                
+
                                 // Actualizar el último mensaje ID
                                 if (msg.id > ultimoMensajeId) {
                                     ultimoMensajeId = msg.id;
@@ -574,7 +579,7 @@
                             }
                         });
                     }
-                    
+
                     // Scroll al final solo si hay contenido nuevo
                     container.scrollTop = container.scrollHeight;
                 } else {
@@ -691,13 +696,14 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    if (data.usuarios.length === 0) {
+                    const usuarios = data.data?.usuarios || [];
+                    if (usuarios.length === 0) {
                         container.innerHTML = '<div class="alert alert-info">No hay usuarios disponibles</div>';
                     } else {
                         let html = '<div class="list-group">';
-                        data.usuarios.forEach(usuario => {
+                        usuarios.forEach(usuario => {
                             html += `
-                                <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
+                                <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                                         onclick="crearSalaPrivada(${usuario.id}, '${usuario.nombre}')">
                                     <div>
                                         <h6 class="mb-0">${usuario.nombre}</h6>
@@ -758,17 +764,18 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    if (data.invitaciones.length === 0) {
+                    const invitaciones = data.data?.invitaciones || [];
+                    if (invitaciones.length === 0) {
                         container.innerHTML = '<div class="alert alert-info">📭 No tienes invitaciones pendientes</div>';
                     } else {
                         let html = '<div class="row g-3">';
-                        data.invitaciones.forEach(inv => {
+                        invitaciones.forEach(inv => {
                             html += `
                                 <div class="col-md-6">
                                     <div class="card border-warning shadow-sm">
                                         <div class="card-body">
                                             <div class="d-flex align-items-center mb-3">
-                                                <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                                <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3"
                                                      style="width:50px;height:50px;font-size:24px">
                                                     ${inv.remitente.nombre.charAt(0).toUpperCase()}
                                                 </div>
@@ -782,11 +789,11 @@
                                             </div>
                                             <p class="text-muted small mb-3">Te ha enviado una invitación para chatear</p>
                                             <div class="d-flex gap-2">
-                                                <button class="btn btn-success btn-sm flex-grow-1" 
+                                                <button class="btn btn-success btn-sm flex-grow-1"
                                                         onclick="aceptarInvitacion(${inv.id}, '${inv.remitente.nombre}')">
                                                     ✓ Aceptar
                                                 </button>
-                                                <button class="btn btn-danger btn-sm flex-grow-1" 
+                                                <button class="btn btn-danger btn-sm flex-grow-1"
                                                         onclick="rechazarInvitacion(${inv.id})">
                                                     ✗ Rechazar
                                                 </button>
@@ -826,10 +833,10 @@
                     await cargarInvitacionesPendientes();
                     await cargarSalasPrivadas();
                     // Abrir la sala automáticamente
-                    if (data.sala) {
+                    if (data.data?.sala) {
                         // Pequeño delay para asegurar que las listas se actualicen
                         setTimeout(() => {
-                            abrirSalaPrivada(data.sala.id, data.sala.nombre, data.sala.participantes);
+                            abrirSalaPrivada(data.data.sala.id, data.data.sala.nombre, data.data.sala.participantes);
                         }, 300);
                     }
                 } else {
@@ -881,25 +888,26 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    if (data.salas.length === 0) {
+                    const salas = data.data?.salas || [];
+                    if (salas.length === 0) {
                         // Ocultar la sección completa si no hay salas
                         seccionSalas.style.display = 'none';
                     } else {
                         // Mostrar la sección si hay salas
                         seccionSalas.style.display = 'block';
                         let html = '<div class="row g-3">';
-                        data.salas.forEach(sala => {
+                        salas.forEach(sala => {
                             const otroUsuario = sala.otroUsuario;
                             html += `
                                 <div class="col-md-6">
                                     <div class="card border-0 shadow-sm h-100">
                                         <div class="card-body">
                                             <div class="d-flex align-items-center mb-3">
-                                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3"
                                                      style="width:50px;height:50px;font-size:24px">
                                                     ${otroUsuario ? otroUsuario.nombre.charAt(0).toUpperCase() : '?'}
                                                 </div>
-                                                <div class="flex-grow-1" style="cursor: pointer;" 
+                                                <div class="flex-grow-1" style="cursor: pointer;"
                                                      onclick="abrirSalaPrivada(${sala.id}, '${sala.nombre}', ${JSON.stringify(sala.participantes).replace(/"/g, '&quot;')})">
                                                     <h6 class="mb-0 fw-bold">${otroUsuario ? otroUsuario.nombre : 'Usuario desconocido'}</h6>
                                                     <small class="text-muted">Chat privado</small>
@@ -907,11 +915,11 @@
                                                 <span class="badge bg-success me-2">🔒</span>
                                             </div>
                                             <div class="d-flex gap-2">
-                                                <button class="btn btn-sm btn-primary flex-grow-1" 
+                                                <button class="btn btn-sm btn-primary flex-grow-1"
                                                         onclick="abrirSalaPrivada(${sala.id}, '${sala.nombre}', ${JSON.stringify(sala.participantes).replace(/"/g, '&quot;')})">
                                                     💬 Abrir Chat
                                                 </button>
-                                                <button class="btn btn-sm btn-danger" 
+                                                <button class="btn btn-sm btn-danger"
                                                         onclick="eliminarSalaPrivada(${sala.id}, '${otroUsuario ? otroUsuario.nombre : 'este usuario'}', event)">
                                                     🗑️ Eliminar
                                                 </button>
@@ -958,12 +966,12 @@
 
                 if (response.ok && data.success) {
                     showMessage('✓ Chat eliminado correctamente', 'success');
-                    
+
                     // Si estamos en el chat que se eliminó, cerrarlo
                     if (salaPrivadaActual === salaId) {
                         cerrarChatPrivado();
                     }
-                    
+
                     // Recargar la lista de salas
                     cargarSalasPrivadas();
                 } else {
@@ -977,15 +985,15 @@
         // Abrir una sala privada
         function abrirSalaPrivada(salaId, nombreSala, participantes) {
             salaPrivadaActual = salaId;
-            
+
             // Mostrar la sección de chat privado
             document.getElementById('chat-privado-section').style.display = 'block';
             document.getElementById('nombre-sala-privada').textContent = nombreSala;
-            
+
             // Mostrar participantes
             const nombresParticipantes = participantes.map(p => p.nombre).join(', ');
             document.getElementById('participantes-sala-privada').textContent = `Participantes: ${nombresParticipantes}`;
-            
+
             // Cargar mensajes
             cargarMensajesSalaPrivada();
 
@@ -1019,11 +1027,12 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    if (data.mensajes.length === 0) {
+                    const mensajes = data.data?.mensajes || [];
+                    if (mensajes.length === 0) {
                         container.innerHTML = '<div class="alert alert-info mb-0">💬 No hay mensajes aún. ¡Envía el primero!</div>';
                     } else {
                         let html = '';
-                        data.mensajes.forEach(msg => {
+                        mensajes.forEach(msg => {
                             const esMio = msg.autor.id === currentUser.id;
                             const alignClass = esMio ? 'text-end' : 'text-start';
                             const bgClass = esMio ? 'bg-success text-white' : 'bg-white';

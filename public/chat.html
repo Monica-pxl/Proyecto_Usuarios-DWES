@@ -528,10 +528,10 @@
 
             <div class="message-input-area">
                 <div class="input-container">
-                    <input 
-                        type="text" 
-                        class="message-input" 
-                        id="messageInput" 
+                    <input
+                        type="text"
+                        class="message-input"
+                        id="messageInput"
                         placeholder="Escribe un mensaje..."
                         onkeypress="handleKeyPress(event)"
                     >
@@ -569,11 +569,15 @@
 
                 if (response.ok && data.token) {
                     authToken = data.token;
-                    currentUser = data.usuario;
-                    
+                    currentUser = {
+                        id: data.data.id,
+                        nombre: data.data.user.nombre,
+                        correo: data.data.user.correo
+                    };
+
                     document.getElementById('loginContainer').classList.add('hidden');
                     document.getElementById('chatContainer').classList.remove('hidden');
-                    
+
                     updateUserInfo();
                     loadChatData();
                     startAutoRefresh();
@@ -599,7 +603,7 @@
             currentTab = tab;
             document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
-            
+
             if (tab === 'general') {
                 loadGeneralChat();
             } else {
@@ -620,7 +624,7 @@
         async function loadGeneralChat() {
             currentRoom = null;
             document.getElementById('chatTitle').textContent = '💬 Chat General';
-            
+
             try {
                 const response = await fetch(`${API_BASE}/general`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
@@ -629,9 +633,9 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    displayMessages(data.mensajes || []);
-                    document.getElementById('onlineUsers').textContent = 
-                        `${data.totalUsuarios || 0} usuarios en total`;
+                    displayMessages(data.data?.mensajes || []);
+                    document.getElementById('onlineUsers').textContent =
+                        `${data.data?.total || 0} mensajes`;
                 }
             } catch (error) {
                 console.error('Error al cargar chat general:', error);
@@ -656,10 +660,11 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    updateRoomsList(data.salas || [], true);
-                    
-                    if (data.salas && data.salas.length > 0) {
-                        selectPrivateRoom(data.salas[0].id);
+                    const salas = data.data?.salas || [];
+                    updateRoomsList(salas, true);
+
+                    if (salas && salas.length > 0) {
+                        selectPrivateRoom(salas[0].id);
                     } else {
                         showEmptyPrivateState();
                     }
@@ -687,7 +692,7 @@
                 }
 
                 const icon = room.icon || (room.tipo === 'privada' ? '🔒' : '💬');
-                
+
                 roomEl.innerHTML = `
                     <div class="room-icon">${icon}</div>
                     <div class="room-info">
@@ -712,7 +717,7 @@
         // Seleccionar sala privada
         async function selectPrivateRoom(roomId) {
             currentRoom = roomId;
-            
+
             try {
                 const response = await fetch(`${API_BASE}/sala-privada/${roomId}/mensajes`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
@@ -721,9 +726,9 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    document.getElementById('chatTitle').textContent = 
-                        `🔒 ${data.sala?.nombre || 'Chat Privado'}`;
-                    displayMessages(data.mensajes || []);
+                    document.getElementById('chatTitle').textContent =
+                        `🔒 ${data.data?.sala?.nombre || 'Chat Privado'}`;
+                    displayMessages(data.data?.mensajes || []);
                     updateRoomsList(await getPrivateRooms(), true);
                 }
             } catch (error) {
@@ -738,7 +743,7 @@
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 const data = await response.json();
-                return data.salas || [];
+                return data.data?.salas || [];
             } catch (error) {
                 return [];
             }
@@ -785,7 +790,7 @@
 
             if (!content) return;
 
-            const url = currentRoom 
+            const url = currentRoom
                 ? `${API_BASE}/sala-privada/${currentRoom}/mensaje`
                 : `${API_BASE}/general`;
 
@@ -826,7 +831,7 @@
         // Logout
         async function logout() {
             if (messagesInterval) clearInterval(messagesInterval);
-            
+
             // Llamar al endpoint de logout para eliminar conversaciones
             if (authToken) {
                 try {
@@ -834,9 +839,9 @@
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${authToken}` }
                     });
-                    
+
                     const data = await response.json();
-                    
+
                     if (data.success && data.salasPrivadasEliminadas > 0) {
                         console.log(`Se eliminaron ${data.salasPrivadasEliminadas} conversaciones privadas`);
                     }
@@ -844,7 +849,7 @@
                     console.error('Error al cerrar sesión:', error);
                 }
             }
-            
+
             authToken = '';
             currentUser = null;
             document.getElementById('chatContainer').classList.add('hidden');
