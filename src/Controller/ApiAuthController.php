@@ -228,7 +228,7 @@ class ApiAuthController extends AbstractController
             'message' => 'Usuario registrado exitosamente',
             'token' => $token,
             'data' => [
-                'token' => $user->getId(),
+                'id' => $user->getId(),
                 'user' => [
                     'nombre' => $user->getNombre(),
                     'correo' => $user->getCorreo()
