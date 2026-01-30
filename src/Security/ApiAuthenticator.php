@@ -26,6 +26,12 @@ class ApiAuthenticator extends AbstractAuthenticator
      */
     public function supports(Request $request): ?bool
     {
+        // No procesar rutas públicas (login y register)
+        $path = $request->getPathInfo();
+        if (in_array($path, ['/api/login', '/api/register'])) {
+            return false;
+        }
+
         // Solo procesa si hay un token Bearer en la cabecera Authorization
         return $request->headers->has('Authorization')
             && str_starts_with($request->headers->get('Authorization'), 'Bearer ');

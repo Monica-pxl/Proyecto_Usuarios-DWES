@@ -34,4 +34,13 @@ class HomeController extends AbstractController
     {
         return $this->render('home/home.html.twig');
     }
+
+    /**
+     * Documentación de APIs
+     */
+    #[Route('/api', name: 'app_api_docs')]
+    public function apiDocs(): Response
+    {
+        return $this->render('home/api_docs.html.twig');
+    }
 }

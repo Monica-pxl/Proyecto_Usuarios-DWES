@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentación de APIs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .api-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 4px solid #0d6efd;
+        }
+        .api-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+        }
+        .method-badge {
+            font-weight: bold;
+            padding: 0.4rem 0.8rem;
+            border-radius: 5px;
+            font-size: 0.85rem;
+        }
+        .method-get { background-color: #28a745; color: white; }
+        .method-post { background-color: #007bff; color: white; }
+        .method-delete { background-color: #dc3545; color: white; }
+        .endpoint-path {
+            background-color: #f8f9fa;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            border-left: 3px solid #0d6efd;
+        }
+        .json-example {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        .param-badge {
+            background-color: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.85rem;
+            font-family: 'Courier New', monospace;
+        }
+        .section-title {
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .auth-required {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        .auth-public {
+            background-color: #d1ecf1;
+            border-left: 4px solid #0dcaf0;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">📚 Documentación de APIs</span>
+            <a href="home" class="btn btn-light">← Volver al Home</a>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h2 mb-3">🚀 API REST - Sistema de Mensajería</h1>
+                <p class="text-muted">
+                    Documentación completa de los endpoints disponibles en el sistema.
+                    Todos los endpoints requieren autenticación mediante token Bearer, excepto los marcados como "Público".
+                </p>
+                <div class="alert alert-info">
+                    <strong>Base URL:</strong> <code>/api</code><br>
+                    <strong>Autenticación:</strong> Bearer Token en header Authorization
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección: Autenticación -->
+        <div class="mb-5">
+            <h2 class="section-title">🔐 Autenticación</h2>
+
+            <!-- LOGIN -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Iniciar Sesión</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-public">🌐 Acceso Público</div>
+                    <div class="endpoint-path mb-3">/api/login</div>
+                    <p class="text-muted">Autentica un usuario y genera un token de sesión.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <div class="json-example">
+{
+    "correo": <span class="text-primary">"usuario@example.com"</span>,
+    "password": <span class="text-primary">"123456"</span>,
+    "latitud": <span class="text-success">40.4168</span> <span class="text-muted">// Opcional</span>,
+    "longitud": <span class="text-success">-3.7038</span> <span class="text-muted">// Opcional</span>
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "token": <span class="text-primary">"15370c494de7e1861d77..."</span>,
+    "data": {
+        "id": <span class="text-success">1</span>,
+        "user": {
+            "nombre": <span class="text-primary">"Juan Pérez"</span>,
+            "correo": <span class="text-primary">"usuario@example.com"</span>
+        }
+    }
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Fallida (401):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-danger">false</span>,
+    "error": <span class="text-primary">"Credenciales inválidas"</span>
+}</div>
+                </div>
+            </div>
+
+            <!-- REGISTER -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Registrar Usuario</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-public">🌐 Acceso Público</div>
+                    <div class="endpoint-path mb-3">/api/register</div>
+                    <p class="text-muted">Crea un nuevo usuario y lo autentica automáticamente.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <div class="json-example">
+{
+    "nombre": <span class="text-primary">"Juan Pérez"</span>,
+    "correo": <span class="text-primary">"juan@example.com"</span>,
+    "password": <span class="text-primary">"123456"</span>
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (201):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Usuario registrado exitosamente"</span>,
+    "token": <span class="text-primary">"b49453458bb95675..."</span>,
+    "data": {
+        "id": <span class="text-success">8</span>,
+        "user": {
+            "nombre": <span class="text-primary">"Juan Pérez"</span>,
+            "correo": <span class="text-primary">"juan@example.com"</span>
+        }
+    }
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Fallida (409):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-danger">false</span>,
+    "error": <span class="text-primary">"El correo ya está registrado"</span>
+}</div>
+                </div>
+            </div>
+
+            <!-- LOGOUT -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Cerrar Sesión</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/logout</div>
+                    <p class="text-muted">Invalida el token del usuario y elimina sus conversaciones privadas.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <p class="text-muted">No requiere parámetros (usa el token Bearer)</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Sesión cerrada correctamente"</span>,
+    "salasPrivadasEliminadas": <span class="text-success">2</span>
+}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección: Usuario -->
+        <div class="mb-5">
+            <h2 class="section-title">👤 Usuario</h2>
+
+            <!-- PERFIL -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Obtener Perfil</h3>
+                        <span class="method-badge method-get">GET</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/perfil</div>
+                    <p class="text-muted">Obtiene la información del usuario autenticado.</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "data": {
+        "token": <span class="text-success">1</span>,
+        "usuario": {
+            "id": <span class="text-success">1</span>,
+            "nombre": <span class="text-primary">"Juan Pérez"</span>,
+            "correo": <span class="text-primary">"juan@example.com"</span>,
+            "estado": <span class="text-success">true</span>,
+            "latitud": <span class="text-success">40.4168</span>,
+            "longitud": <span class="text-success">-3.7038</span>
+        }
+    }
+}</div>
+                </div>
+            </div>
+
+            <!-- ACTUALIZAR UBICACIÓN -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Actualizar Ubicación</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/actualizar</div>
+                    <p class="text-muted">Actualiza las coordenadas del usuario.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <div class="json-example">
+{
+    "latitud": <span class="text-success">40.4168</span>,
+    "longitud": <span class="text-success">-3.7038</span>
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Ubicación actualizada correctamente"</span>,
+    "latitud": <span class="text-success">40.4168</span>,
+    "longitud": <span class="text-success">-3.7038</span>
+}</div>
+                </div>
+            </div>
+
+            <!-- USUARIOS CERCANOS (HOME) -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Usuarios Cercanos (≤ 5km)</h3>
+                        <span class="method-badge method-get">GET</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/home</div>
+                    <p class="text-muted">Lista usuarios activos a menos de 5 km de distancia.</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Asi compruebas que vaya"</span>,
+    "data": {
+        "token": <span class="text-success">1</span>,
+        "usuarios": [
+            {
+                "id": <span class="text-success">2</span>,
+                "nombre": <span class="text-primary">"María López"</span>,
+                "correo": <span class="text-primary">"maria@example.com"</span>,
+                "latitud": <span class="text-success">40.4200</span>,
+                "longitud": <span class="text-success">-3.7100</span>,
+                "distancia": <span class="text-success">0.85</span>
+            }
+        ],
+        "total": <span class="text-success">1</span>
+    }
+}</div>
+                </div>
+            </div>
+
+            <!-- TODOS LOS USUARIOS -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Listar Todos los Usuarios</h3>
+                        <span class="method-badge method-get">GET</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/usuarios</div>
+                    <p class="text-muted">Lista todos los usuarios activos, ordenados por distancia.</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "data": {
+        "usuarios": [ <span class="text-muted">/* Array de usuarios */</span> ],
+        "total": <span class="text-success">5</span>
+    }
+}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección: Chat General -->
+        <div class="mb-5">
+            <h2 class="section-title">💬 Chat General</h2>
+
+            <!-- OBTENER MENSAJES -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Obtener Mensajes del Chat General</h3>
+                        <span class="method-badge method-get">GET</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/general</div>
+                    <p class="text-muted">Obtiene mensajes desde que el usuario inició sesión.</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "data": {
+        "token": <span class="text-success">1</span>,
+        "geolocalizacion": {
+            "latitud": <span class="text-success">40.4168</span>,
+            "longitud": <span class="text-success">-3.7038</span>
+        },
+        "mensajes": [
+            {
+                "id": <span class="text-success">1</span>,
+                "contenido": <span class="text-primary">"Hola a todos"</span>,
+                "fechaCreacion": <span class="text-primary">"2026-01-30 10:30:00"</span>,
+                "autor": {
+                    "id": <span class="text-success">2</span>,
+                    "nombre": <span class="text-primary">"María"</span>
+                }
+            }
+        ],
+        "total": <span class="text-success">1</span>
+    }
+}</div>
+                </div>
+            </div>
+
+            <!-- ENVIAR MENSAJE -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Enviar Mensaje al Chat General</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/general</div>
+                    <p class="text-muted">Envía un mensaje al chat público.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <div class="json-example">
+{
+    "contenido": <span class="text-primary">"¡Hola a todos!"</span>
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (201):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Mensaje enviado correctamente"</span>,
+    "data": {
+        "mensaje": {
+            "id": <span class="text-success">5</span>,
+            "contenido": <span class="text-primary">"¡Hola a todos!"</span>,
+            "fechaCreacion": <span class="text-primary">"2026-01-30 11:00:00"</span>,
+            "autor": {
+                "token": <span class="text-success">1</span>,
+                "nombre": <span class="text-primary">"Juan Pérez"</span>
+            }
+        }
+    }
+}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección: Salas Privadas -->
+        <div class="mb-5">
+            <h2 class="section-title">🔒 Salas Privadas</h2>
+
+            <!-- CREAR SALA PRIVADA -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Crear Sala Privada (Enviar Invitación)</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/sala-privada/crear</div>
+                    <p class="text-muted">Crea una invitación de sala privada a otro usuario.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <div class="json-example">
+{
+    "usuarioId": <span class="text-success">2</span>
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (201):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Invitación enviada a María López"</span>,
+    "invitacion": {
+        "id": <span class="text-success">10</span>,
+        "destinatario": {
+            "id": <span class="text-success">2</span>,
+            "nombre": <span class="text-primary">"María López"</span>
+        },
+        "estado": <span class="text-primary">"pendiente"</span>
+    }
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Fallida (409):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-danger">false</span>,
+    "error": <span class="text-primary">"Ya existe una invitación pendiente con este usuario"</span>
+}</div>
+                </div>
+            </div>
+
+            <!-- INVITACIONES PENDIENTES -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Invitaciones Pendientes Recibidas</h3>
+                        <span class="method-badge method-get">GET</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/invitaciones-pendientes</div>
+                    <p class="text-muted">Lista las invitaciones pendientes que has recibido.</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "data": {
+        "invitaciones": [
+            {
+                "id": <span class="text-success">15</span>,
+                "nombre": <span class="text-primary">"Chat privado: Juan & María"</span>,
+                "fechaCreacion": <span class="text-primary">"2026-01-30 09:00:00"</span>,
+                "remitente": {
+                    "id": <span class="text-success">1</span>,
+                    "nombre": <span class="text-primary">"Juan Pérez"</span>,
+                    "correo": <span class="text-primary">"juan@example.com"</span>
+                }
+            }
+        ],
+        "total": <span class="text-success">1</span>
+    }
+}</div>
+                </div>
+            </div>
+
+            <!-- ACEPTAR INVITACIÓN -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Aceptar Invitación</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/invitacion/{salaId}/aceptar</div>
+                    <p class="text-muted">Acepta una invitación y activa la sala privada.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros URL:</h6>
+                    <p><span class="param-badge">salaId</span> - ID de la sala (en la URL)</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Invitación aceptada"</span>,
+    "data": {
+        "sala": {
+            "id": <span class="text-success">15</span>,
+            "nombre": <span class="text-primary">"Chat privado: Juan & María"</span>,
+            "tipo": <span class="text-primary">"privada"</span>,
+            "participantes": [ <span class="text-muted">/* Array de usuarios */</span> ]
+        }
+    }
+}</div>
+                </div>
+            </div>
+
+            <!-- RECHAZAR INVITACIÓN -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Rechazar Invitación</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/invitacion/{salaId}/rechazar</div>
+                    <p class="text-muted">Rechaza una invitación y elimina la sala.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros URL:</h6>
+                    <p><span class="param-badge">salaId</span> - ID de la sala (en la URL)</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Invitación rechazada"</span>
+}</div>
+                </div>
+            </div>
+
+            <!-- LISTAR SALAS PRIVADAS -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Listar Salas Privadas Activas</h3>
+                        <span class="method-badge method-get">GET</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/salas-privadas</div>
+                    <p class="text-muted">Lista todas las salas privadas activas del usuario.</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "data": {
+        "salas": [
+            {
+                "id": <span class="text-success">15</span>,
+                "nombre": <span class="text-primary">"Chat privado: Juan & María"</span>,
+                "tipo": <span class="text-primary">"privada"</span>,
+                "participantes": [ <span class="text-muted">/* Array */</span> ],
+                "otroUsuario": {
+                    "id": <span class="text-success">2</span>,
+                    "nombre": <span class="text-primary">"María López"</span>
+                }
+            }
+        ],
+        "total": <span class="text-success">1</span>
+    }
+}</div>
+                </div>
+            </div>
+
+            <!-- OBTENER MENSAJES SALA PRIVADA -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Obtener Mensajes de Sala Privada</h3>
+                        <span class="method-badge method-get">GET</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/sala-privada/{salaId}/mensajes</div>
+                    <p class="text-muted">Obtiene mensajes de una sala privada desde que accediste.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros URL:</h6>
+                    <p><span class="param-badge">salaId</span> - ID de la sala (en la URL)</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "data": {
+        "mensajes": [ <span class="text-muted">/* Array de mensajes */</span> ],
+        "sala": {
+            "id": <span class="text-success">15</span>,
+            "nombre": <span class="text-primary">"Chat privado: Juan & María"</span>
+        }
+    }
+}</div>
+                </div>
+            </div>
+
+            <!-- ENVIAR MENSAJE SALA PRIVADA -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Enviar Mensaje a Sala Privada</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/sala-privada/{salaId}/mensaje</div>
+                    <p class="text-muted">Envía un mensaje a una sala privada.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros URL:</h6>
+                    <p><span class="param-badge">salaId</span> - ID de la sala (en la URL)</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros Body:</h6>
+                    <div class="json-example">
+{
+    "contenido": <span class="text-primary">"Mensaje privado"</span>
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (201):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Mensaje enviado correctamente"</span>,
+    "data": {
+        "mensaje": { <span class="text-muted">/* Objeto mensaje */</span> }
+    }
+}</div>
+                </div>
+            </div>
+
+            <!-- ELIMINAR SALA PRIVADA -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Salir de Sala Privada</h3>
+                        <span class="method-badge method-delete">DELETE</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/sala-privada/{salaId}</div>
+                    <p class="text-muted">Elimina tus mensajes de la sala. Si no quedan usuarios activos, elimina la sala completa.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros URL:</h6>
+                    <p><span class="param-badge">salaId</span> - ID de la sala (en la URL)</p>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Has salido del chat. La sala fue eliminada..."</span>
+}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección: Otros Endpoints -->
+        <div class="mb-5">
+            <h2 class="section-title">⚙️ Otros Endpoints</h2>
+
+            <!-- LISTAR PRIVADO -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Listar Salas Privadas (Alternativo)</h3>
+                        <span class="method-badge method-get">GET</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/privado</div>
+                    <p class="text-muted">Lista salas privadas activas del usuario (formato alternativo).</p>
+                </div>
+            </div>
+
+            <!-- CAMBIAR CHAT PRIVADO -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Cambiar Chat Privado</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/privado/cambiarchat</div>
+                    <p class="text-muted">Cambia a otra sala privada.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <div class="json-example">
+{
+    "sala_id": <span class="text-success">15</span>
+}</div>
+                </div>
+            </div>
+
+            <!-- SALIR SALA PRIVADA -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Salir de Sala Privada (Alternativo)</h3>
+                        <span class="method-badge method-post">POST</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/privado/salir</div>
+                    <p class="text-muted">Sale de una sala privada (método POST alternativo).</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <div class="json-example">
+{
+    "sala_id": <span class="text-success">15</span>
+}</div>
+                </div>
+            </div>
+
+            <!-- ELIMINAR MENSAJE -->
+            <div class="card api-card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h5 mb-0">Eliminar Mensaje</h3>
+                        <span class="method-badge method-delete">DELETE</span>
+                    </div>
+                    <div class="auth-required">🔒 Requiere Autenticación</div>
+                    <div class="endpoint-path mb-3">/api/mensaje</div>
+                    <p class="text-muted">Elimina un mensaje propio.</p>
+
+                    <h6 class="fw-bold mt-3">Parámetros:</h6>
+                    <div class="json-example">
+{
+    "mensaje_id": <span class="text-success">123</span>
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Exitosa (200):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-success">true</span>,
+    "message": <span class="text-primary">"Mensaje eliminado correctamente"</span>
+}</div>
+
+                    <h6 class="fw-bold mt-3">Respuesta Fallida (403):</h6>
+                    <div class="json-example">
+{
+    "success": <span class="text-danger">false</span>,
+    "error": <span class="text-primary">"No puedes eliminar un mensaje que no es tuyo"</span>
+}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nota final -->
+        <div class="card border-0 shadow-sm bg-primary text-white">
+            <div class="card-body p-4">
+                <h5 class="mb-3">📌 Notas Importantes</h5>
+                <ul class="mb-0">
+                    <li>Todos los endpoints (excepto login y register) requieren el header: <code class="bg-light text-dark px-2 rounded">Authorization: Bearer {token}</code></li>
+                    <li>Los tokens se obtienen al hacer login o registro exitoso</li>
+                    <li>Las coordenadas (latitud/longitud) son opcionales en login/register pero necesarias para usar la funcionalidad de usuarios cercanos</li>
+                    <li>Los mensajes se ordenan por fecha de creación ascendente</li>
+                    <li>Al cerrar sesión, se eliminan automáticamente las salas privadas sin otros usuarios activos</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-white py-4 mt-5 border-top">
+        <div class="container text-center text-muted">
+            <p class="mb-0">📚 Documentación de APIs - Sistema de Mensajería © 2026</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

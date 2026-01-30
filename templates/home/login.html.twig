@@ -195,10 +195,16 @@
                 </div>
             `;
 
-            document.querySelector('hr ~ .text-center p').textContent = '¿Ya tienes cuenta?';
+            const bottomText = document.querySelector('.text-center p.text-muted.mb-2');
+            if (bottomText) {
+                bottomText.textContent = '¿Ya tienes cuenta?';
+            }
             registerLink.textContent = 'Inicia sesión aquí';
-            registerLink.className = 'btn btn-outline-secondary';
-            registerLink.onclick = () => window.location.reload();
+            registerLink.className = 'btn btn-outline-secondary w-100';
+            registerLink.onclick = (e) => {
+                e.preventDefault();
+                window.location.reload();
+            };
 
             // Manejar el envío del formulario de registro
             form.addEventListener('submit', async (e) => {

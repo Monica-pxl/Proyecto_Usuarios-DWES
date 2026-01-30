@@ -19,7 +19,7 @@ security:
 
         # Firewall para las APIs - usa autenticación por token Bearer
         api:
-            pattern: ^/api
+            pattern: ^/api/
             stateless: true
             provider: app_user_provider
             custom_authenticator: App\Security\ApiAuthenticator
@@ -51,7 +51,7 @@ security:
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
 
         # Todas las demás rutas API requieren autenticación
-        - { path: ^/api, roles: ROLE_USER }
+        - { path: ^/api/, roles: ROLE_USER }
 
         # La ruta principal (/) no requiere autenticación forzada
         # El HomeController maneja la lógica internamente
