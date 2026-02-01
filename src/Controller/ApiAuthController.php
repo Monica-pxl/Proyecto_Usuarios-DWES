@@ -104,6 +104,7 @@ class ApiAuthController extends AbstractController
 
         if (!$user instanceof User) {
             return $this->json([
+                'success' => false,
                 'error' => 'No autenticado'
             ], Response::HTTP_UNAUTHORIZED);
         }
@@ -194,7 +195,7 @@ class ApiAuthController extends AbstractController
         if ($existingUser) {
             return $this->json([
                 'success' => false,
-                'error' => 'El correo ya está registrado'
+                'error' => 'el correo ya está registrado'
             ], Response::HTTP_CONFLICT);
         }
 
@@ -226,9 +227,8 @@ class ApiAuthController extends AbstractController
         return $this->json([
             'success' => true,
             'message' => 'Usuario registrado exitosamente',
-            'token' => $token,
             'data' => [
-                'id' => $user->getId(),
+                'token' => 1,
                 'user' => [
                     'nombre' => $user->getNombre(),
                     'correo' => $user->getCorreo()
@@ -265,7 +265,7 @@ class ApiAuthController extends AbstractController
             'success' => true,
             'data' => [
                 'token' => $user->getId(),
-                'usuario' => [
+                'user' => [
                     'id' => $user->getId(),
                     'nombre' => $user->getNombre(),
                     'correo' => $user->getCorreo(),
@@ -375,9 +375,9 @@ class ApiAuthController extends AbstractController
             'message' => 'Asi compruebas que vaya',
             'data' => [
                 'token' => $user->getId(),
-                'usuarios' => $usuariosCercanos,
-                'total' => count($usuariosCercanos)
-            ]
+                'usuariosCercanos' => $usuariosCercanos
+            ],
+            'total' => count($usuariosCercanos)
         ]);
     }
 
@@ -441,10 +441,8 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'data' => [
-                'usuarios' => $todosUsuarios,
-                'total' => count($todosUsuarios)
-            ]
+            'data' => $todosUsuarios,
+            'total' => count($todosUsuarios)
         ]);
     }
 
@@ -459,6 +457,7 @@ class ApiAuthController extends AbstractController
 
         if (!$user instanceof User || !$user->isEstado()) {
             return $this->json([
+                'success' => false,
                 'error' => 'Usuario no autenticado'
             ], Response::HTTP_UNAUTHORIZED);
         }
@@ -539,6 +538,7 @@ class ApiAuthController extends AbstractController
 
         if (!$user instanceof User || !$user->isEstado()) {
             return $this->json([
+                'success' => false,
                 'error' => 'Usuario no autenticado'
             ], Response::HTTP_UNAUTHORIZED);
         }
@@ -547,6 +547,7 @@ class ApiAuthController extends AbstractController
 
         if (!isset($data['contenido']) || trim($data['contenido']) === '') {
             return $this->json([
+                'success' => false,
                 'error' => 'El contenido del mensaje es requerido'
             ], Response::HTTP_BAD_REQUEST);
         }
@@ -577,15 +578,34 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'message' => 'Mensaje enviado correctamente',
+            'message' => 'correcto',
             'data' => [
                 'mensaje' => [
                     'id' => $mensaje->getId(),
+                    'mensajes' => 'mostrar mensajes',
                     'contenido' => $mensaje->getContenido(),
                     'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
                     'autor' => [
                         'token' => $user->getId(),
                         'nombre' => $user->getNombre()
+                    ]
+                ],
+                'Listado provisionales' => [
+                    'usuarios proximos' => [
+                        'token' => $user->getId(),
+                        'nombre' => $user->getNombre(),
+                        'imagen' => 'si hay avatar',
+                        'distancia' => 'especificar la distancia que tiene que haber'
+                    ],
+                    'invitaciones' => [
+                        'token' => $user->getId(),
+                        'nombre' => $user->getNombre(),
+                        'message' => ''
+                    ],
+                    'listado usuario chat' => [
+                        'token' => $user->getId(),
+                        'nombre' => $user->getNombre(),
+                        'imagen' => 'si hay avatar'
                     ]
                 ]
             ]
@@ -1357,15 +1377,236 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'data' => [
-                'salas' => $salasFormateadas,
-                'total' => count($salasFormateadas)
+            'data' => $salasFormateadas,
+            'total' => count($salasFormateadas)
+        ]);
+    }
+
+    /**
+     * Invitar usuarios a sala privada
+     * POST /api/invitar
+     */
+    #[Route('/invitar', name: 'api_invitar_usuarios', methods: ['POST'])]
+    public function invitarUsuarios(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['sala_id']) || !isset($data['usuario_id'])) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Se requieren sala_id y usuario_id'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Buscar la sala
+        $sala = $this->salaRepository->find($data['sala_id']);
+        if (!$sala) {
+            return $this->json([
+                'success' => false,
+                'error' => 'La sala especificada no existe'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verificar que el usuario sea participante de la sala
+        if (!$sala->getUsuarios()->contains($user)) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No tienes acceso a esta sala'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $usuarioIds = is_array($data['usuario_id']) ? $data['usuario_id'] : [$data['usuario_id']];
+        $usuariosInvitados = [];
+
+        foreach ($usuarioIds as $usuarioId) {
+            $usuario = $this->userRepository->find($usuarioId);
+            if (!$usuario) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'uno o varios usuarios no existen'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            if (!$sala->getUsuarios()->contains($usuario)) {
+                $sala->addUsuario($usuario);
+                $usuariosInvitados[] = [
+                    'id' => $usuario->getId(),
+                    'nombre' => $usuario->getNombre()
+                ];
+            }
+        }
+
+        $this->entityManager->flush();
+
+        // Formatear todos los usuarios de la sala
+        $todosUsuarios = [];
+        foreach ($sala->getUsuarios() as $participante) {
+            $todosUsuarios[] = [
+                'id' => $participante->getId(),
+                'nombre' => $participante->getNombre()
+            ];
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Usuarios invitados correctamente',
+            'sala' => [
+                'id' => $sala->getId(),
+                'nombre' => $sala->getNombre(),
+                'usuarios' => $todosUsuarios
             ]
         ]);
     }
 
     /**
-     * Gestión de mensajes - Eliminar mensaje
+     * Gestión de mensajes - Endpoint unificado
+     * POST/GET/DELETE /api/mensaje
+     */
+    #[Route('/mensaje', name: 'api_mensaje_post', methods: ['POST'])]
+    public function crearMensaje(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['contenido']) || trim($data['contenido']) === '') {
+            return $this->json([
+                'success' => false,
+                'error' => 'El contenido del mensaje es requerido'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Determinar sala (si no se especifica sala_id, usar sala general)
+        $sala = null;
+        if (isset($data['sala_id'])) {
+            $sala = $this->salaRepository->find($data['sala_id']);
+            if (!$sala) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'La sala especificada no existe'
+                ], Response::HTTP_NOT_FOUND);
+            }
+        } else {
+            // Usar sala general
+            $sala = $this->salaRepository->findOneBy(['nombre' => 'General']);
+            if (!$sala) {
+                $sala = new Sala();
+                $sala->setNombre('General');
+                $sala->setActiva(true);
+                $sala->setFechaCreacion(new \DateTime());
+                $this->entityManager->persist($sala);
+                $this->entityManager->flush();
+            }
+        }
+
+        // Crear el mensaje
+        $mensaje = new Mensage();
+        $mensaje->setContenido(trim($data['contenido']));
+        $mensaje->setFechaCreacion(new \DateTime());
+        $mensaje->setAutor($user);
+        $mensaje->setSala($sala);
+        $mensaje->setLeidoPor([]);
+
+        $this->entityManager->persist($mensaje);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'mensaje' => [
+                'id' => $mensaje->getId(),
+                'contenido' => $mensaje->getContenido(),
+                'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
+                'autor' => [
+                    'id' => $user->getId(),
+                    'nombre' => $user->getNombre()
+                ],
+                'sala_id' => $sala->getId()
+            ]
+        ]);
+    }
+
+    #[Route('/mensaje', name: 'api_mensaje_get', methods: ['GET'])]
+    public function obtenerMensajes(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $salaId = $request->query->get('sala_id');
+        $sala = null;
+
+        if ($salaId) {
+            $sala = $this->salaRepository->find($salaId);
+            if (!$sala) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'La sala especificada no existe'
+                ], Response::HTTP_NOT_FOUND);
+            }
+        } else {
+            // Usar sala general por defecto
+            $sala = $this->salaRepository->findOneBy(['nombre' => 'General']);
+            if (!$sala) {
+                return $this->json([
+                    'success' => true,
+                    'mensajes' => [],
+                    'total' => 0
+                ]);
+            }
+        }
+
+        // Obtener mensajes de la sala
+        $mensajes = $this->mensageRepository->createQueryBuilder('m')
+            ->where('m.sala = :sala')
+            ->setParameter('sala', $sala)
+            ->orderBy('m.fechaCreacion', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $mensajesFormateados = [];
+        foreach ($mensajes as $mensaje) {
+            $mensajesFormateados[] = [
+                'id' => $mensaje->getId(),
+                'contenido' => $mensaje->getContenido(),
+                'fechaCreacion' => $mensaje->getFechaCreacion()->format('Y-m-d H:i:s'),
+                'autor' => [
+                    'id' => $mensaje->getAutor()->getId(),
+                    'nombre' => $mensaje->getAutor()->getNombre()
+                ],
+                'sala_id' => $sala->getId()
+            ];
+        }
+
+        return $this->json([
+            'success' => true,
+            'mensajes' => $mensajesFormateados,
+            'total' => count($mensajesFormateados)
+        ]);
+    }
+
+    /**
+     * Gestión de mensajes - Eliminar mensaje (ya existe pero actualizar respuesta)
      * DELETE /api/mensaje
      */
     #[Route('/mensaje', name: 'api_eliminar_mensaje', methods: ['DELETE'])]

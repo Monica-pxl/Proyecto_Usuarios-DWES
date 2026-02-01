@@ -239,7 +239,7 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    currentUser = data.data?.usuario;
+                    currentUser = data.data?.user;
                     displayUserData(currentUser);
 
                     // Verificar si necesita actualizar ubicación
@@ -319,7 +319,7 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    const usuariosCercanos = data.data?.usuarios || [];
+                    const usuariosCercanos = data.data?.usuariosCercanos || [];
                     if (usuariosCercanos.length === 0) {
                         container.innerHTML = '<div class="alert alert-info">📍 No hay usuarios activos a menos de 5 km</div>';
                     } else {
@@ -347,7 +347,7 @@
                                 </div>
                             `;
                         });
-                        html += '</div><div class="alert alert-success mt-3 mb-0">✓ ${data.data?.total || 0} usuario(s) cercano(s)</div>';
+                        html += `</div><div class="alert alert-success mt-3 mb-0">✓ ${data.data?.total || 0} usuario(s) cercano(s)</div>`;
                         container.innerHTML = html;
                     }
                 } else {
@@ -363,7 +363,7 @@
                 const ubicacion = await obtenerUbicacion();
 
                 // Actualizar en el servidor
-                const response = await fetch(baseUrl + '/api/actualizar-ubicacion', {
+                const response = await fetch(baseUrl + '/api/actualizar', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
