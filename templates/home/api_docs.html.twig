@@ -848,14 +848,690 @@
             </div>
         </section>
 
+        <!-- SECCIÓN: SALAS PRIVADAS -->
+        <section id="salas-privadas" class="section">
+            <h2 class="section-title">🔒 Salas Privadas</h2>
+
+            <!-- POST /api/sala-privada/crear -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-post">POST</span>
+                    <span class="endpoint-path">/api/sala-privada/crear</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Crea una invitación de sala privada entre el usuario autenticado y otro usuario. Si ya existe una sala activa, devuelve esa sala.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <div class="code-block">
+<pre>{
+  "usuarioId": 2
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (201)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "message": "Invitación enviada a Juan Pérez",
+  "invitacion": {
+    "id": 5,
+    "destinatario": {
+      "id": 2,
+      "nombre": "Juan Pérez"
+    },
+    "estado": "pendiente"
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">400</span>
+                            <code>{"error": "Se requiere el ID del usuario destinatario"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"error": "Usuario destinatario no encontrado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">409</span>
+                            <code>{"success": false, "error": "Ya existe una invitación pendiente con este usuario"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GET /api/invitaciones-pendientes -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-get">GET</span>
+                    <span class="endpoint-path">/api/invitaciones-pendientes</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Lista todas las invitaciones pendientes recibidas por el usuario autenticado.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <p style="color: #6c757d; font-style: italic;">No requiere parámetros.</p>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "data": {
+    "invitaciones": [
+      {
+        "id": 5,
+        "nombre": "Chat privado: Carlos & María",
+        "fechaCreacion": "2026-02-01 10:30:00",
+        "remitente": {
+          "id": 3,
+          "nombre": "Carlos",
+          "correo": "carlos@example.com"
+        }
+      }
+    ],
+    "total": 1
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"error": "Usuario no autenticado"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POST /api/invitacion/{salaId}/aceptar -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-post">POST</span>
+                    <span class="endpoint-path">/api/invitacion/{salaId}/aceptar</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Acepta una invitación a sala privada y la activa para chat.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <p style="color: #6c757d; font-style: italic;">URL param: <code>{salaId}</code> - ID de la sala/invitación</p>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "message": "Invitación aceptada",
+  "data": {
+    "sala": {
+      "id": 5,
+      "nombre": "Chat privado: Carlos & María",
+      "tipo": "privada",
+      "participantes": [
+        {"id": 3, "nombre": "Carlos"},
+        {"id": 4, "nombre": "María"}
+      ]
+    }
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"error": "Invitación no encontrada"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"error": "No tienes acceso a esta invitación"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POST /api/invitacion/{salaId}/rechazar -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-post">POST</span>
+                    <span class="endpoint-path">/api/invitacion/{salaId}/rechazar</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Rechaza y elimina una invitación a sala privada.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <p style="color: #6c757d; font-style: italic;">URL param: <code>{salaId}</code> - ID de la sala/invitación</p>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "message": "Invitación rechazada"
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"error": "Invitación no encontrada"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"error": "No tienes acceso a esta invitación"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GET /api/salas-privadas -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-get">GET</span>
+                    <span class="endpoint-path">/api/salas-privadas</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Lista todas las salas privadas activas del usuario autenticado.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <p style="color: #6c757d; font-style: italic;">No requiere parámetros.</p>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "data": {
+    "salas": [
+      {
+        "id": 5,
+        "nombre": "Chat privado: Carlos & María",
+        "tipo": "privada",
+        "participantes": [
+          {"id": 3, "nombre": "Carlos"},
+          {"id": 4, "nombre": "María"}
+        ],
+        "otroUsuario": {
+          "id": 4,
+          "nombre": "María"
+        }
+      }
+    ],
+    "total": 1
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"error": "Usuario no autenticado"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GET /api/sala-privada/{salaId}/mensajes -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-get">GET</span>
+                    <span class="endpoint-path">/api/sala-privada/{salaId}/mensajes</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Obtiene todos los mensajes de una sala privada específica.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <p style="color: #6c757d; font-style: italic;">URL param: <code>{salaId}</code> - ID de la sala</p>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "data": {
+    "mensajes": [
+      {
+        "id": 10,
+        "contenido": "Hola, ¿cómo estás?",
+        "fechaCreacion": "2026-02-01 11:00:00",
+        "autor": {
+          "id": 3,
+          "nombre": "Carlos"
+        }
+      }
+    ],
+    "sala": {
+      "id": 5,
+      "nombre": "Chat privado: Carlos & María"
+    }
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"error": "Sala no encontrada"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"error": "No tienes acceso a esta sala"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POST /api/sala-privada/{salaId}/mensaje -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-post">POST</span>
+                    <span class="endpoint-path">/api/sala-privada/{salaId}/mensaje</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Envía un mensaje a una sala privada específica.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <p style="color: #6c757d; font-style: italic;">URL param: <code>{salaId}</code> - ID de la sala</p>
+                    <div class="code-block">
+<pre>{
+  "contenido": "Hola, ¿cómo estás?"
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (201)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "message": "Mensaje enviado correctamente",
+  "data": {
+    "mensaje": {
+      "id": 15,
+      "contenido": "Hola, ¿cómo estás?",
+      "fechaCreacion": "2026-02-01 11:30:00",
+      "autor": {
+        "id": 3,
+        "nombre": "Carlos"
+      }
+    }
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"error": "Sala no encontrada"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"error": "No tienes acceso a esta sala"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">400</span>
+                            <code>{"error": "El contenido del mensaje es requerido"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DELETE /api/sala-privada/{salaId} -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-delete">DELETE</span>
+                    <span class="endpoint-path">/api/sala-privada/{salaId}</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Elimina los mensajes del usuario en la sala. Si no quedan otros usuarios activos, elimina la sala completa.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <p style="color: #6c757d; font-style: italic;">URL param: <code>{salaId}</code> - ID de la sala</p>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "message": "Has salido del chat. La sala fue eliminada porque no quedan usuarios activos."
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"error": "Sala no encontrada"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"error": "No tienes acceso a esta sala"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: GESTIÓN DE MENSAJES -->
+        <section id="mensajes" class="section">
+            <h2 class="section-title">✉️ Gestión de Mensajes</h2>
+
+            <!-- POST /api/invitar -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-post">POST</span>
+                    <span class="endpoint-path">/api/invitar</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Invita usuarios adicionales a una sala privada existente.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <div class="code-block">
+<pre>{
+  "sala_id": 5,
+  "usuario_id": [6, 7]  <span style="color: #75715e;">// Array de IDs o un solo ID</span>
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "message": "Usuarios invitados correctamente",
+  "sala": {
+    "id": 5,
+    "nombre": "Chat privado: Carlos & María",
+    "usuarios": [
+      {"id": 3, "nombre": "Carlos"},
+      {"id": 4, "nombre": "María"},
+      {"id": 6, "nombre": "Pedro"}
+    ]
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"success": false, "error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">400</span>
+                            <code>{"success": false, "error": "Se requieren sala_id y usuario_id"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"success": false, "error": "La sala especificada no existe"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"success": false, "error": "No tienes acceso a esta sala"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POST /api/mensaje -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-post">POST</span>
+                    <span class="endpoint-path">/api/mensaje</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Crea un mensaje en una sala. Si no se especifica sala_id, el mensaje se envía al chat general.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <div class="code-block">
+<pre>{
+  "contenido": "Hola a todos",
+  "sala_id": 5  <span style="color: #75715e;">// opcional, por defecto usa sala general</span>
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "mensaje": {
+    "id": 20,
+    "contenido": "Hola a todos",
+    "fechaCreacion": "2026-02-01 12:00:00",
+    "autor": {
+      "id": 3,
+      "nombre": "Carlos"
+    },
+    "sala_id": 5
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"success": false, "error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">400</span>
+                            <code>{"success": false, "error": "El contenido del mensaje es requerido"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"success": false, "error": "La sala especificada no existe"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GET /api/mensaje -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-get">GET</span>
+                    <span class="endpoint-path">/api/mensaje</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Obtiene los mensajes de una sala. Si no se especifica sala_id, devuelve mensajes del chat general.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <p style="color: #6c757d; font-style: italic;">Query param (opcional): <code>?sala_id=5</code></p>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "mensajes": [
+    {
+      "id": 20,
+      "contenido": "Hola a todos",
+      "fechaCreacion": "2026-02-01 12:00:00",
+      "autor": {
+        "id": 3,
+        "nombre": "Carlos"
+      },
+      "sala_id": 5
+    }
+  ],
+  "total": 1
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"success": false, "error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"success": false, "error": "La sala especificada no existe"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DELETE /api/mensaje -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-delete">DELETE</span>
+                    <span class="endpoint-path">/api/mensaje</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Elimina un mensaje específico. Solo el autor puede eliminar sus propios mensajes.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Parámetros de entrada</div>
+                    <div class="code-block">
+<pre>{
+  "mensaje_id": 20
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "message": "Mensaje eliminado correctamente"
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"success": false, "error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">400</span>
+                            <code>{"success": false, "error": "El ID del mensaje es requerido"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"success": false, "error": "El mensaje no existe"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"success": false, "error": "No puedes eliminar un mensaje que no es tuyo"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- INFO ADICIONAL -->
         <div class="info-box" style="margin-top: 50px;">
             <div class="info-box-title">📋 Resumen de Endpoints</div>
-            <p><strong>Total de endpoints:</strong> 24 endpoints en el controlador ApiAuthController</p>
-            <p><strong>Endpoints públicos:</strong> 3 (register, login, y la ruta base)</p>
-            <p><strong>Endpoints protegidos:</strong> 21 (requieren token de autenticación)</p>
+            <p><strong>Total de endpoints:</strong> 24 endpoints documentados completamente</p>
+            <p><strong>Endpoints públicos:</strong> 2 (register, login)</p>
+            <p><strong>Endpoints protegidos:</strong> 22 (requieren token de autenticación)</p>
             <p><strong>Métodos HTTP utilizados:</strong> GET (11), POST (11), DELETE (2)</p>
-            <p style="margin-top: 10px;"><em>Nota: Solo se muestran los endpoints principales en esta documentación. Para ver la lista completa de 24 endpoints, consultar el código fuente del ApiAuthController.</em></p>
+            <p style="margin-top: 10px;"><strong>Secciones:</strong> Autenticación (3), Usuarios (5), Chat General (2), Salas Privadas (8), Gestión de Mensajes (4)</p>
         </div>
 
         <div class="info-box">
@@ -872,13 +1548,14 @@
         </div>
 
         <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107;">
-            <div class="info-box-title" style="color: #856404;">📝 Nota Importante</div>
-            <p>Esta documentación muestra los endpoints principales. El controlador ApiAuthController contiene 24 endpoints en total, incluyendo funcionalidades avanzadas para:</p>
+            <div class="info-box-title" style="color: #856404;">� Documentación Completa</div>
+            <p>Esta documentación cubre los 24 endpoints disponibles en el sistema:</p>
             <ul style="margin-left: 20px; margin-top: 10px;">
-                <li>Gestión completa de salas privadas</li>
-                <li>Sistema de invitaciones a salas</li>
-                <li>CRUD completo de mensajes</li>
-                <li>Operaciones de usuario y geolocalización</li>
+                <li><strong>Autenticación:</strong> Registro, login y logout</li>
+                <li><strong>Gestión de Usuarios:</strong> Perfil, actualización de ubicación, usuarios cercanos y listado completo</li>
+                <li><strong>Chat General:</strong> Envío y recepción de mensajes públicos</li>
+                <li><strong>Salas Privadas:</strong> Creación, invitaciones, gestión de participantes y mensajes privados</li>
+                <li><strong>Gestión de Mensajes:</strong> CRUD completo de mensajes individuales</li>
             </ul>
         </div>
     </div>
