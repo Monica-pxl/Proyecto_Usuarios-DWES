@@ -868,8 +868,141 @@ class ApiAuthController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'data' => $salasFormateadas,
+            'data' => ['salas' => $salasFormateadas],
             'total' => count($salasFormateadas)
+        ]);
+    }
+
+    /**
+     * Obtener mensajes de una sala privada específica
+     * GET /api/privado/{salaId}/mensajes
+     */
+    #[Route('/privado/{salaId}/mensajes', name: 'api_sala_privada_mensajes', methods: ['GET'])]
+    public function obtenerMensajesSalaPrivada(int $salaId): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Buscar la sala
+        $sala = $this->salaRepository->find($salaId);
+        if (!$sala) {
+            return $this->json([
+                'success' => false,
+                'error' => 'La sala no existe'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verificar que el usuario sea participante de la sala
+        if (!$sala->getUsuarios()->contains($user)) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No tienes acceso a esta sala'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Obtener mensajes de la sala
+        $mensajes = $this->mensageRepository->createQueryBuilder('m')
+            ->where('m.sala = :sala')
+            ->setParameter('sala', $sala)
+            ->orderBy('m.fechaEnvio', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $mensajesFormateados = [];
+        foreach ($mensajes as $mensaje) {
+            $mensajesFormateados[] = [
+                'id' => $mensaje->getId(),
+                'contenido' => $mensaje->getContenido(),
+                'autor' => [
+                    'id' => $mensaje->getAutor()->getId(),
+                    'nombre' => $mensaje->getAutor()->getNombre()
+                ],
+                'fecha' => $mensaje->getFechaEnvio()->format('Y-m-d H:i:s')
+            ];
+        }
+
+        return $this->json([
+            'success' => true,
+            'data' => [
+                'sala' => [
+                    'id' => $sala->getId(),
+                    'nombre' => $sala->getNombre()
+                ],
+                'mensajes' => $mensajesFormateados
+            ]
+        ]);
+    }
+
+    /**
+     * Enviar mensaje a sala privada
+     * POST /api/privado/{salaId}/mensaje
+     */
+    #[Route('/privado/{salaId}/mensaje', name: 'api_enviar_mensaje_sala_privada', methods: ['POST'])]
+    public function enviarMensajeSalaPrivada(int $salaId, Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['mensaje']) || empty(trim($data['mensaje']))) {
+            return $this->json([
+                'success' => false,
+                'error' => 'El mensaje no puede estar vacío'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Buscar la sala
+        $sala = $this->salaRepository->find($salaId);
+        if (!$sala) {
+            return $this->json([
+                'success' => false,
+                'error' => 'La sala no existe'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verificar que el usuario sea participante de la sala
+        if (!$sala->getUsuarios()->contains($user)) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No tienes acceso a esta sala'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Crear el mensaje
+        $mensaje = new Mensage();
+        $mensaje->setContenido(trim($data['mensaje']));
+        $mensaje->setAutor($user);
+        $mensaje->setSala($sala);
+        $mensaje->setFechaEnvio(new \DateTime());
+
+        $this->entityManager->persist($mensaje);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Mensaje enviado correctamente',
+            'data' => [
+                'id' => $mensaje->getId(),
+                'contenido' => $mensaje->getContenido(),
+                'autor' => [
+                    'id' => $user->getId(),
+                    'nombre' => $user->getNombre()
+                ],
+                'fecha' => $mensaje->getFechaEnvio()->format('Y-m-d H:i:s')
+            ]
         ]);
     }
 

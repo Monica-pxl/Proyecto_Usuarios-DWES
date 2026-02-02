@@ -72,6 +72,17 @@
     .header p {
         font-size: 1.1rem;
         opacity: 0.95;
+        margin-bottom: 15px;
+    }
+
+    #token-status {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        display: inline-block;
+        font-size: 0.95rem;
+        font-weight: 500;
     }
 
     .content {
@@ -318,6 +329,78 @@
         margin-bottom: 8px;
     }
 
+    .test-button {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        margin-left: 10px;
+        transition: background 0.3s;
+    }
+
+    .test-button:hover {
+        background: #218838;
+    }
+
+    .test-section {
+        margin-top: 20px;
+        border: 2px solid #28a745;
+        border-radius: 8px;
+        padding: 20px;
+        background: #f8fff9;
+        display: none;
+    }
+
+    .test-section.active {
+        display: block;
+    }
+
+    .test-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+    }
+
+    .test-output {
+        background: #2d2d2d;
+        color: #f8f8f2;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+        margin-top: 10px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .execute-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    .execute-button:hover {
+        background: #0056b3;
+    }
+
+    .execute-button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+    }
+
     @media (max-width: 768px) {
         .header h1 {
             font-size: 1.8rem;
@@ -341,23 +424,44 @@
         <a href="{{ path('app_home') }}" class="btn-back">Inicio</a>
         <h1>📚 Documentación de la API</h1>
         <p>Sistema de Usuarios y Mensajería - Todos los Endpoints</p>
+        <div id="token-status">
+            🔴 Token no configurado
+        </div>
     </div>
 
     <div class="content">
+        <!-- Información sobre testing -->
+        <div style="background: #e8f5e8; border: 2px solid #28a745; border-radius: 10px; padding: 20px; margin-bottom: 30px;">
+            <h3 style="color: #155724; margin-bottom: 15px;">🧪 Testing de Endpoints</h3>
+            <p style="color: #155724; margin-bottom: 15px;">
+                Esta documentación incluye funcionalidad para **probar endpoints directamente** desde aquí:
+            </p>
+            <ul style="color: #155724; margin-left: 20px;">
+                <li>🔴/🟢 **Estado del token**: Indica si tienes un token configurado</li>
+                <li>🧪 **Botones "Probar endpoint"**: Abren una sección de testing</li>
+                <li>📝 **Formularios de entrada**: Para introducir datos JSON</li>
+                <li>🚀 **Botón "Ejecutar"**: Envía la petición real a la API</li>
+            </ul>
+            <p style="color: #155724; margin-top: 15px;">
+                💡 **Tip**: Haz login primero para obtener un token y poder probar endpoints protegidos.
+            </p>
+        </div>
+
         <!-- Navegación rápida -->
         <div class="nav-menu">
             <h3>📚 Navegación Rápida</h3>
             <div class="nav-links">
-                <a href="#autenticacion">Autenticación</a>
-                <a href="#usuarios">Usuarios</a>
-                <a href="#chat-general">Chat General</a>
-                <a href="#privado">Privado</a>
-                <a href="#mensajes">Gestión de Mensajes</a>
+                <a href="#autenticacion">🔐 Autenticación</a>
+                <a href="#usuarios">👥 Usuarios</a>
+                <a href="#chat-general">💬 Chat General</a>
+                <a href="#privado">🔒 Chats Privados</a>
+                <a href="#invitaciones">📧 Invitaciones</a>
+                <a href="#mensajes">📝 Gestión de Mensajes</a>
             </div>
         </div>
 
         <div class="info-box">
-            <div class="info-box-title">Autenticación con Token Bearer</div>
+            <div class="info-box-title">🔑 Autenticación con Token Bearer</div>
             <p>Los endpoints protegidos requieren enviar el token en el header:</p>
             <code style="background: #f8f9fa; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-top: 5px;">
                 Authorization: Bearer {tu_token_aqui}
@@ -374,6 +478,7 @@
                     <span class="method method-post">POST</span>
                     <span class="endpoint-path">/api/register</span>
                     <span class="access-badge access-public">Público</span>
+                    <button class="test-button" onclick="toggleTestSection('register')">🧪 Probar endpoint</button>
                 </div>
                 <div class="endpoint-description">
                     Registra un nuevo usuario en el sistema. El usuario queda activo automáticamente tras el registro.
@@ -422,6 +527,15 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- SECCIÃ"N DE TESTING -->
+                <div id="test-register" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <p><strong>Datos de entrada (JSON):</strong></p>
+                    <textarea class="test-input" name="body" rows="6" placeholder='{"nombre": "Usuario Prueba", "correo": "test@example.com", "password": "123456", "latitud": 40.4168, "longitud": -3.7038}'></textarea>
+                    <button class="execute-button" onclick="testEndpoint('register', 'POST', '/api/register')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
+                </div>
             </div>
 
             <!-- POST /api/login -->
@@ -430,6 +544,7 @@
                     <span class="method method-post">POST</span>
                     <span class="endpoint-path">/api/login</span>
                     <span class="access-badge access-public">Público</span>
+                    <button class="test-button" onclick="toggleTestSection('login')">🧪 Probar endpoint</button>
                 </div>
                 <div class="endpoint-description">
                     Autentica a un usuario existente. Genera un token de sesión y marca al usuario como activo.
@@ -476,6 +591,15 @@
                             <code>{"success": false, "error": "Credenciales inválidas"}</code>
                         </div>
                     </div>
+                </div>
+
+                <!-- SECCIÃ"N DE TESTING -->
+                <div id="test-login" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <p><strong>Datos de entrada (JSON):</strong></p>
+                    <textarea class="test-input" name="body" rows="4" placeholder='{"correo": "admin@test.com", "password": "admin1234"}'></textarea>
+                    <button class="execute-button" onclick="testEndpoint('login', 'POST', '/api/login')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
                 </div>
             </div>
 
@@ -857,43 +981,182 @@
                 <div class="endpoint-header">
                     <span class="method method-get">GET</span>
                     <span class="endpoint-path">/api/privado</span>
-                    <span class="access-badge access-protected">Requiere Token</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
                 </div>
                 <div class="endpoint-description">
                     Lista todas las salas privadas activas del usuario autenticado.
                 </div>
 
                 <div class="subsection">
-                    <div class="subsection-title">Parámetros de entrada</div>
+                    <div class="subsection-title">Datos que se reciben</div>
                     <p style="color: #6c757d; font-style: italic;">No requiere parámetros.</p>
                 </div>
 
                 <div class="subsection">
-                    <div class="subsection-title">Respuesta exitosa (200)</div>
+                    <div class="subsection-title">Datos que se devuelven</div>
                     <div class="code-block">
 <pre>{
   "success": true,
-  "data": [
-    {
-      "id": 5,
-      "nombre": "Chat privado: Carlos & María",
-      "usuarios": [
-        {"id": 3, "nombre": "Carlos"},
-        {"id": 4, "nombre": "María"}
-      ]
-    }
-  ],
+  "data": {
+    "salas": [
+      {
+        "id": 5,
+        "nombre": "Chat: Carlos Rodriguez - María García",
+        "usuarios": [
+          {"id": 3, "nombre": "Carlos Rodriguez"},
+          {"id": 4, "nombre": "María García"}
+        ]
+      }
+    ]
+  },
   "total": 1
 }</pre>
                     </div>
                 </div>
 
                 <div class="subsection">
-                    <div class="subsection-title">Respuestas de error</div>
+                    <div class="subsection-title">Respuestas erróneas</div>
                     <div class="error-list">
                         <div class="error-item">
                             <span class="error-code">401</span>
                             <code>{"success": false, "error": "Usuario no autenticado"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GET /api/privado/{salaId}/mensajes -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-get">GET</span>
+                    <span class="endpoint-path">/api/privado/{salaId}/mensajes</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Obtiene todos los mensajes de una sala privada específica.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Datos que se reciben</div>
+                    <ul style="color: #6c757d; margin-left: 20px;">
+                        <li><strong>salaId</strong> (path param): ID de la sala privada</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Datos que se devuelven</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "data": {
+    "sala": {
+      "id": 5,
+      "nombre": "Chat: Carlos Rodriguez - María García"
+    },
+    "mensajes": [
+      {
+        "id": 1,
+        "contenido": "Hola Carlos!",
+        "autor": {
+          "id": 4,
+          "nombre": "María García"
+        },
+        "fecha": "2026-02-02 10:00:00"
+      },
+      {
+        "id": 2,
+        "contenido": "Hola María, ¿cómo estás?",
+        "autor": {
+          "id": 3,
+          "nombre": "Carlos Rodriguez"
+        },
+        "fecha": "2026-02-02 10:01:00"
+      }
+    ]
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas erróneas</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"success": false, "error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"success": false, "error": "La sala no existe"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"success": false, "error": "No tienes acceso a esta sala"}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POST /api/privado/{salaId}/mensaje -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method method-post">POST</span>
+                    <span class="endpoint-path">/api/privado/{salaId}/mensaje</span>
+                    <span class="access-badge access-protected">🔒 Requiere Token</span>
+                </div>
+                <div class="endpoint-description">
+                    Envía un mensaje a una sala privada específica.
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Datos que se reciben</div>
+                    <div class="code-block">
+<pre>{
+  "mensaje": "Hola, ¿cómo estás?"
+}</pre>
+                    </div>
+                    <ul style="color: #6c757d; margin-left: 20px; margin-top: 10px;">
+                        <li><strong>salaId</strong> (path param): ID de la sala privada</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Datos que se devuelven</div>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "message": "Mensaje enviado correctamente",
+  "data": {
+    "id": 3,
+    "contenido": "Hola, ¿cómo estás?",
+    "autor": {
+      "id": 3,
+      "nombre": "Carlos Rodriguez"
+    },
+    "fecha": "2026-02-02 10:05:00"
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Respuestas erróneas</div>
+                    <div class="error-list">
+                        <div class="error-item">
+                            <span class="error-code">401</span>
+                            <code>{"success": false, "error": "Usuario no autenticado"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">400</span>
+                            <code>{"success": false, "error": "El mensaje no puede estar vacío"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">404</span>
+                            <code>{"success": false, "error": "La sala no existe"}</code>
+                        </div>
+                        <div class="error-item">
+                            <span class="error-code">403</span>
+                            <code>{"success": false, "error": "No tienes acceso a esta sala"}</code>
                         </div>
                     </div>
                 </div>
@@ -1091,6 +1354,7 @@
                     <span class="method method-post">POST</span>
                     <span class="endpoint-path">/api/mensaje</span>
                     <span class="access-badge access-protected">Requiere Token</span>
+                    <button class="test-button" onclick="toggleTestSection('mensaje-post')">🧪 Probar endpoint</button>
                 </div>
                 <div class="endpoint-description">
                     Crea un mensaje en una sala. Si no se especifica sala_id, el mensaje se envía al chat general.
@@ -1141,6 +1405,16 @@
                             <code>{"success": false, "error": "La sala especificada no existe"}</code>
                         </div>
                     </div>
+                </div>
+
+                <!-- SECCIÃ"N DE TESTING -->
+                <div id="test-mensaje-post" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <p><strong>Datos de entrada (JSON):</strong></p>
+                    <textarea class="test-input" name="body" rows="3" placeholder='{"contenido": "¡Hola desde la documentación!"}'></textarea>
+                    <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">💡 Este endpoint requiere token de autenticación</p>
+                    <button class="execute-button" onclick="testEndpoint('mensaje-post', 'POST', '/api/mensaje')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
                 </div>
             </div>
 
@@ -1253,12 +1527,12 @@
 
         <!-- INFO ADICIONAL -->
         <div class="info-box" style="margin-top: 50px;">
-            <div class="info-box-title">‹ Resumen de Endpoints</div>
-            <p><strong>Total de endpoints:</strong> 16 endpoints documentados completamente</p>
+            <div class="info-box-title">🔍 Resumen de Endpoints</div>
+            <p><strong>Total de endpoints:</strong> 20 endpoints documentados completamente</p>
             <p><strong>Endpoints públicos:</strong> 2 (register, login)</p>
-            <p><strong>Endpoints protegidos:</strong> 14 (requieren token de autenticación)</p>
-            <p><strong>Métodos HTTP utilizados:</strong> GET (8), POST (7), DELETE (1)</p>
-            <p style="margin-top: 10px;"><strong>Secciones:</strong> Autenticación (3), Usuarios (5), Chat General (2), Privado (3), Gestión de Mensajes (3)</p>
+            <p><strong>Endpoints protegidos:</strong> 18 (requieren token de autenticación)</p>
+            <p><strong>Métodos HTTP utilizados:</strong> GET (9), POST (10), DELETE (1)</p>
+            <p style="margin-top: 10px;"><strong>Secciones:</strong> Autenticación (3), Usuarios (4), Chat General (2), Privado (6), Invitaciones (3), Gestión de Mensajes (3)</p>
         </div>
 
         <div class="info-box">
@@ -1275,15 +1549,25 @@
         </div>
 
         <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107;">
-            <div class="info-box-title" style="color: #856404;">ï¿½ Documentación Completa</div>
-            <p>Esta documentación cubre los 24 endpoints disponibles en el sistema:</p>
+            <div class="info-box-title" style="color: #856404;">📋 Documentación Completa y Actualizada</div>
+            <p>Esta documentación cubre todos los <strong>20 endpoints</strong> disponibles en el sistema:</p>
             <ul style="margin-left: 20px; margin-top: 10px;">
-                <li><strong>Autenticación:</strong> Registro, login y logout</li>
-                <li><strong>Gestión de Usuarios:</strong> Perfil, actualización de ubicación, usuarios cercanos y listado completo</li>
-                <li><strong>Chat General:</strong> Envío y recepción de mensajes públicos</li>
-                <li><strong>Salas Privadas:</strong> Creación, invitaciones, gestión de participantes y mensajes privados</li>
-                <li><strong>Gestión de Mensajes:</strong> Crear, obtener y eliminar mensajes (con invitaciones)</li>
+                <li><strong>🔐 Autenticación (3):</strong> Registro, login y logout</li>
+                <li><strong>👥 Gestión de Usuarios (4):</strong> Perfil, actualización de ubicación, usuarios cercanos y listado completo</li>
+                <li><strong>💬 Chat General (2):</strong> Envío y recepción de mensajes públicos</li>
+                <li><strong>🔒 Salas Privadas (6):</strong> Listado, mensajes específicos, envío de mensajes, cambio de sala, salir de sala</li>
+                <li><strong>📧 Invitaciones (3):</strong> Enviar invitaciones, aceptar y rechazar invitaciones</li>
+                <li><strong>📝 Gestión de Mensajes (3):</strong> Crear, obtener y eliminar mensajes generales</li>
             </ul>
+            <div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 5px;">
+                <strong>✨ Nuevos endpoints agregados:</strong>
+                <ul style="margin-left: 15px; margin-top: 5px;">
+                    <li><code>GET /api/privado/{salaId}/mensajes</code> - Mensajes de sala específica</li>
+                    <li><code>POST /api/privado/{salaId}/mensaje</code> - Enviar mensaje a sala específica</li>
+                    <li><code>POST /api/invitacion/{salaId}/aceptar</code> - Aceptar invitaciones</li>
+                    <li><code>POST /api/invitacion/{salaId}/rechazar</code> - Rechazar invitaciones</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -1313,6 +1597,122 @@
         } else {
             backToTop.style.display = 'none';
         }
+    });
+
+    // Función para mostrar/ocultar sección de testing
+    function toggleTestSection(endpointId) {
+        const testSection = document.getElementById('test-' + endpointId);
+        testSection.classList.toggle('active');
+    }
+
+    // Función para probar endpoint
+    async function testEndpoint(endpointId, method, url) {
+        const testSection = document.getElementById('test-' + endpointId);
+        const executeButton = testSection.querySelector('.execute-button');
+        const outputDiv = testSection.querySelector('.test-output');
+        
+        // Obtener token del localStorage
+        const token = localStorage.getItem('api_token');
+        
+        executeButton.disabled = true;
+        executeButton.textContent = 'Ejecutando...';
+        
+        try {
+            // Construir datos de request
+            let requestData = {};
+            const inputs = testSection.querySelectorAll('.test-input');
+            
+            inputs.forEach(input => {
+                if (input.value.trim()) {
+                    try {
+                        // Si el input contiene JSON, parsearlo
+                        if (input.value.trim().startsWith('{') || input.value.trim().startsWith('[')) {
+                            requestData = JSON.parse(input.value);
+                        } else {
+                            // Si es un valor simple, agregarlo como parámetro
+                            requestData[input.name || 'data'] = input.value;
+                        }
+                    } catch (e) {
+                        // Si no es JSON válido, usar como string
+                        requestData[input.name || 'data'] = input.value;
+                    }
+                }
+            });
+            
+            // Configurar request
+            const config = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            };
+            
+            // Agregar token si existe
+            if (token) {
+                config.headers['Authorization'] = 'Bearer ' + token;
+            }
+            
+            // Agregar body para métodos que lo requieren
+            if (method !== 'GET' && method !== 'DELETE' && Object.keys(requestData).length > 0) {
+                config.body = JSON.stringify(requestData);
+            }
+            
+            // Ejecutar request
+            const response = await fetch(url, config);
+            const responseData = await response.json();
+            
+            // Mostrar resultado
+            const result = {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers),
+                data: responseData
+            };
+            
+            outputDiv.textContent = JSON.stringify(result, null, 2);
+            outputDiv.style.color = response.ok ? '#a9dc76' : '#ff6b6b';
+            
+        } catch (error) {
+            outputDiv.textContent = 'Error: ' + error.message;
+            outputDiv.style.color = '#ff6b6b';
+        } finally {
+            executeButton.disabled = false;
+            executeButton.textContent = '🚀 Ejecutar';
+        }
+    }
+
+    // Función para configurar token
+    function setApiToken() {
+        const token = prompt('Introduce tu token de API (Bearer):');
+        if (token) {
+            localStorage.setItem('api_token', token);
+            alert('Token configurado correctamente');
+            updateTokenStatus();
+        }
+    }
+
+    // Función para limpiar token
+    function clearApiToken() {
+        localStorage.removeItem('api_token');
+        alert('Token eliminado');
+        updateTokenStatus();
+    }
+
+    // Función para actualizar estado del token
+    function updateTokenStatus() {
+        const token = localStorage.getItem('api_token');
+        const statusElement = document.getElementById('token-status');
+        if (token) {
+            statusElement.innerHTML = '🟢 Token configurado <button onclick="clearApiToken()" style="margin-left: 10px; padding: 2px 8px; border: none; border-radius: 3px; background: #ff4757; color: white; cursor: pointer;">Limpiar</button>';
+        } else {
+            statusElement.innerHTML = '🔴 Token no configurado <button onclick="setApiToken()" style="margin-left: 10px; padding: 2px 8px; border: none; border-radius: 3px; background: #007bff; color: white; cursor: pointer;">Configurar</button>';
+        }
+    }
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', function() {
+        updateTokenStatus();
     });
 </script>
 {% endblock %}

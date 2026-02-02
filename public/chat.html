@@ -550,6 +550,16 @@
             font-weight: bold;
             margin-left: 5px;
         }
+
+        .user-item {
+            border-left: 3px solid #27ae60;
+            background: linear-gradient(to right, #2c3e50, #34495e);
+        }
+
+        .user-item:hover {
+            background: linear-gradient(to right, #34495e, #3d566e);
+            border-left-color: #2ecc71;
+        }
     </style>
 </head>
 <body>
@@ -644,6 +654,7 @@
         let currentTab = 'general';
         let currentRoom = null;
         let messagesInterval = null;
+        let isUserSelectingRoom = false; // Flag para evitar interferencias durante selecciones manuales
 
         // Login
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -712,7 +723,7 @@
             if (tab === 'general') {
                 loadGeneralChat();
             } else if (tab === 'private') {
-                loadPrivateChats();
+                loadPrivateChats(true); // Forzar selección cuando se cambia manualmente al tab
             } else if (tab === 'invitations') {
                 loadInvitations();
             }
@@ -720,14 +731,25 @@
 
         // Cargar datos del chat
         async function loadChatData() {
+            // Si el usuario está seleccionando una sala, no interferir
+            if (isUserSelectingRoom) {
+                console.log('Auto-refresh bloqueado: usuario seleccionando sala');
+                return;
+            }
+
+            console.log('Auto-refresh ejecutando para tab:', currentTab, 'sala actual:', currentRoom);
+
             if (currentTab === 'general') {
                 await loadGeneralChat();
             } else if (currentTab === 'private') {
-                // Si hay una sala seleccionada, solo recargar sus mensajes
+                // Si hay una sala seleccionada, SOLO recargar sus mensajes sin tocar la selección
                 if (currentRoom) {
+                    console.log('Recargando mensajes de sala actual:', currentRoom);
                     await reloadCurrentRoom();
                 } else {
-                    await loadPrivateChats();
+                    console.log('No hay sala seleccionada, cargando lista sin forzar selección');
+                    // Si no hay sala seleccionada, cargar sin forzar selección automática
+                    await loadPrivateChats(false);
                 }
             } else if (currentTab === 'invitations') {
                 await loadInvitations();
@@ -751,8 +773,9 @@
 
                 if (response.ok) {
                     displayMessages(data.data?.mensajes || []);
-                    document.getElementById('onlineUsers').textContent =
-                        `${data.data?.total || 0} mensajes`;
+                    
+                    // Cargar usuarios activos
+                    await loadActiveUsers();
                 }
             } catch (error) {
                 console.error('Error al cargar chat general:', error);
@@ -767,10 +790,141 @@
             }]);
         }
 
-        // Cargar chats privados
-        async function loadPrivateChats() {
+        // Cargar usuarios activos
+        async function loadActiveUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/usuarios`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const usuarios = data.data || [];
+                    console.log('Usuarios activos cargados:', usuarios.length);
+                    
+                    // Actualizar contador
+                    document.getElementById('onlineUsers').textContent = 
+                        `${usuarios.length} usuarios activos`;
+                    
+                    // Mostrar lista de usuarios
+                    displayActiveUsers(usuarios);
+                } else {
+                    console.error('Error al cargar usuarios activos:', data);
+                    document.getElementById('onlineUsers').textContent = '0 usuarios activos';
+                }
+            } catch (error) {
+                console.error('Error al cargar usuarios activos:', error);
+                document.getElementById('onlineUsers').textContent = '0 usuarios activos';
+            }
+        }
+
+        // Mostrar usuarios activos en la lista de salas cuando estamos en chat general
+        function displayActiveUsers(usuarios) {
+            const roomsList = document.getElementById('roomsList');
+            
+            // Mantener la sala general activa
+            const generalRoom = {
+                id: 'general',
+                nombre: 'Chat General',
+                tipo: 'general',
+                icon: '💬'
+            };
+
+            let roomsContent = '';
+            
+            // Sala general (siempre primera)
+            roomsContent += `
+                <div class="room-item active" onclick="loadGeneralChat()">
+                    <div class="room-icon">${generalRoom.icon}</div>
+                    <div class="room-info">
+                        <div class="room-name">${generalRoom.nombre}</div>
+                        <div class="room-last-message">Sala principal del chat</div>
+                    </div>
+                </div>
+            `;
+
+            // Agregar usuarios activos
+            if (usuarios && usuarios.length > 0) {
+                roomsContent += `
+                    <div style="padding: 15px; color: #95a5a6; font-size: 14px; border-top: 1px solid #34495e; margin-top: 10px;">
+                        👥 Usuarios Conectados (${usuarios.length})
+                    </div>
+                `;
+
+                usuarios.forEach(usuario => {
+                    const distanciaText = usuario.distancia ? 
+                        `📍 ${usuario.distancia.toFixed(1)} km` : 
+                        '📍 Ubicación no disponible';
+
+                    roomsContent += `
+                        <div class="room-item user-item" onclick="createPrivateChat(${usuario.id})">
+                            <div class="room-icon" style="background: linear-gradient(135deg, #27ae60, #2ecc71); font-size: 14px;">
+                                ${usuario.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="room-info">
+                                <div class="room-name" style="font-size: 14px;">${usuario.nombre}</div>
+                                <div class="room-last-message" style="font-size: 11px;">${distanciaText}</div>
+                            </div>
+                            <div style="font-size: 12px; color: #27ae60; font-weight: bold;">💬</div>
+                        </div>
+                    `;
+                });
+            } else {
+                roomsContent += `
+                    <div style="padding: 15px; color: #95a5a6; font-size: 12px; font-style: italic; text-align: center;">
+                        No hay otros usuarios conectados
+                    </div>
+                `;
+            }
+
+            roomsList.innerHTML = roomsContent;
+        }
+
+        // Crear chat privado con usuario
+        async function createPrivateChat(userId) {
+            console.log('Creando chat privado con usuario:', userId);
+            
             try {
                 const response = await fetch(`${API_BASE}/sala-privada`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        usuario_id: userId,
+                        nombre: `Chat Privado`
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Cambiar automáticamente al tab de privados
+                    currentTab = 'private';
+                    document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelector('.chat-tab:nth-child(2)').classList.add('active');
+                    
+                    // Cargar chats privados y seleccionar el nuevo
+                    await loadPrivateChats(true);
+                    
+                    alert('Chat privado creado exitosamente');
+                } else {
+                    alert(data.error || 'Error al crear chat privado');
+                }
+            } catch (error) {
+                console.error('Error al crear chat privado:', error);
+                alert('Error de conexión al crear chat privado');
+            }
+        }
+
+        // Cargar chats privados
+        async function loadPrivateChats(forceSelection = false) {
+            console.log('Cargando chats privados, forceSelection:', forceSelection, 'currentRoom:', currentRoom);
+            
+            try {
+                const response = await fetch(`${API_BASE}/privado`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
@@ -778,22 +932,39 @@
 
                 if (response.ok) {
                     const salas = data.data?.salas || [];
+                    console.log('Salas privadas encontradas:', salas.length, salas);
+                    
+                    // SIEMPRE actualizar la lista visual primero
                     updateRoomsList(salas, true);
 
                     if (salas && salas.length > 0) {
-                        // Si ya hay una sala seleccionada y existe en la lista, mantenerla
-                        const salaExiste = currentRoom && salas.some(s => s.id === currentRoom);
+                        // Si ya hay una sala seleccionada y existe en la lista, mantenerla a toda costa
+                        const salaExiste = currentRoom && salas.some(s => s.id == currentRoom);
+                        
                         if (salaExiste) {
-                            // Mantener la sala actual y solo recargar sus mensajes
-                            await reloadCurrentRoom();
+                            console.log('Manteniendo sala actual:', currentRoom, '- NO recargar mensajes en auto-refresh');
+                            // Durante auto-refresh, NO recargar mensajes para evitar parpadeos
+                            // Solo recargar si es una acción manual (forceSelection = true)
+                            if (forceSelection) {
+                                await reloadCurrentRoom();
+                            }
+                        } else if (forceSelection) {
+                            console.log('Forzando selección de primera sala:', salas[0].id);
+                            // Solo seleccionar automáticamente si se fuerza explícitamente
+                            await selectPrivateRoom(salas[0].id);
                         } else {
-                            // Seleccionar la primera sala
-                            selectPrivateRoom(salas[0].id);
+                            console.log('No hay sala actual válida, mostrando estado vacío');
+                            // Si no hay sala actual válida y no se fuerza selección, mostrar estado vacío
+                            currentRoom = null;
+                            showEmptyPrivateState();
                         }
                     } else {
+                        console.log('No hay salas privadas disponibles');
                         currentRoom = null;
                         showEmptyPrivateState();
                     }
+                } else {
+                    console.error('Error al obtener salas privadas:', data);
                 }
             } catch (error) {
                 console.error('Error al cargar chats privados:', error);
@@ -830,8 +1001,13 @@
 
                 roomEl.onclick = () => {
                     if (isPrivate) {
+                        // Actualizar la selección visual inmediatamente para evitar parpadeos
+                        document.querySelectorAll('.room-item').forEach(item => item.classList.remove('active'));
+                        roomEl.classList.add('active');
                         selectPrivateRoom(room.id);
                     } else {
+                        document.querySelectorAll('.room-item').forEach(item => item.classList.remove('active'));
+                        roomEl.classList.add('active');
                         loadGeneralChat();
                     }
                 };
@@ -844,17 +1020,21 @@
         async function reloadCurrentRoom() {
             if (!currentRoom) return;
 
+            console.log('Recargando mensajes para sala:', currentRoom);
+
             try {
-                const response = await fetch(`${API_BASE}/sala-privada/${currentRoom}/mensajes`, {
+                const response = await fetch(`${API_BASE}/privado/${currentRoom}/mensajes`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
                 const data = await response.json();
 
-                if (response.ok) {
+                if (response.ok && data.success) {
+                    // Solo actualizar los mensajes, NO tocar la lista de salas ni el título
                     displayMessages(data.data?.mensajes || []);
-                    // Actualizar lista de salas sin cambiar la selección
-                    updateRoomsList(await getPrivateRooms(), true);
+                    console.log('Mensajes actualizados para sala:', currentRoom);
+                } else {
+                    console.error('Error al recargar sala:', data);
                 }
             } catch (error) {
                 console.error('Error al recargar sala:', error);
@@ -863,30 +1043,57 @@
 
         // Seleccionar sala privada
         async function selectPrivateRoom(roomId) {
+            console.log('Seleccionando sala privada:', roomId);
+            
+            isUserSelectingRoom = true; // Marcar que estamos en proceso de selección
             currentRoom = roomId;
 
+            // Mostrar estado de carga
+            showLoadingPrivateState();
+
             try {
-                const response = await fetch(`${API_BASE}/sala-privada/${roomId}/mensajes`, {
+                const response = await fetch(`${API_BASE}/privado/${roomId}/mensajes`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
                 const data = await response.json();
+                console.log('Datos de la sala recibidos:', data);
 
-                if (response.ok) {
+                if (response.ok && data.success) {
+                    // Actualizar el título del chat
                     document.getElementById('chatTitle').textContent =
                         `🔒 ${data.data?.sala?.nombre || 'Chat Privado'}`;
+                    
+                    // Mostrar los mensajes
                     displayMessages(data.data?.mensajes || []);
-                    updateRoomsList(await getPrivateRooms(), true);
+                    
+                    // Actualizar la lista de salas para mostrar la selección correcta
+                    const salas = await getPrivateRooms();
+                    updateRoomsList(salas, true);
+                    
+                    console.log('Sala privada cargada correctamente:', roomId);
+                } else {
+                    console.error('Error en la respuesta del servidor:', data);
+                    alert('Error al cargar la sala privada');
+                    showEmptyPrivateState();
                 }
             } catch (error) {
                 console.error('Error al cargar sala privada:', error);
+                alert('Error de conexión al cargar la sala');
+                showEmptyPrivateState();
+            } finally {
+                // Pequeño delay para asegurar que la selección se haya completado
+                setTimeout(() => {
+                    isUserSelectingRoom = false;
+                    console.log('Selección de sala completada');
+                }, 1000); // Aumenté el delay a 1 segundo
             }
         }
 
         // Obtener salas privadas
         async function getPrivateRooms() {
             try {
-                const response = await fetch(`${API_BASE}/sala-privada`, {
+                const response = await fetch(`${API_BASE}/privado`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 const data = await response.json();
@@ -938,7 +1145,7 @@
             if (!content) return;
 
             const url = currentRoom
-                ? `${API_BASE}/sala-privada/${currentRoom}/mensaje`
+                ? `${API_BASE}/privado/${currentRoom}/mensaje`
                 : `${API_BASE}/general`;
 
             try {
@@ -1024,6 +1231,16 @@
                     <div class="empty-state-icon">🔒</div>
                     <p>No tienes chats privados</p>
                     <p>Crea una sala privada para empezar</p>
+                </div>
+            `;
+            document.getElementById('chatTitle').textContent = '🔒 Chats Privados';
+        }
+
+        function showLoadingPrivateState() {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = `
+                <div class="loading">
+                    <p>Cargando chat privado...</p>
                 </div>
             `;
         }
@@ -1124,30 +1341,112 @@
         // Aceptar invitación
         async function acceptInvitation(salaId) {
             try {
+                console.log('Aceptando invitación para sala:', salaId);
+                
+                // DETENER el auto-refresh durante el proceso
+                if (messagesInterval) {
+                    clearInterval(messagesInterval);
+                    console.log('Auto-refresh detenido durante aceptación');
+                }
+                
                 const response = await fetch(`${API_BASE}/invitacion/${salaId}/aceptar`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
                 const data = await response.json();
+                console.log('Respuesta del servidor:', data);
 
                 if (response.ok) {
-                    alert('¡Invitación aceptada! El chat privado está disponible.');
-                    // Recargar invitaciones y cambiar a tab de privados
-                    await loadInvitations();
-                    // Cambiar automáticamente a chats privados y abrir la nueva sala
+                    // Marcar que estamos haciendo una selección para evitar interferencias
+                    isUserSelectingRoom = true;
+                    
+                    // Cambiar al tab de privados de forma forzada
+                    currentTab = 'private';
                     document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
                     document.querySelectorAll('.chat-tab')[1].classList.add('active');
-                    await loadPrivateChats();
-                    if (data.data?.sala?.id) {
-                        selectPrivateRoom(data.data.sala.id);
+                    
+                    // Verificar si tenemos el ID de la sala en la respuesta
+                    if (data.data && data.data.sala && data.data.sala.id) {
+                        console.log('ID de sala encontrado:', data.data.sala.id);
+                        
+                        // Establecer la sala como seleccionada de forma PERMANENTE
+                        currentRoom = data.data.sala.id;
+                        
+                        // Cargar la sala directamente SIN recargar la lista primero
+                        console.log('Cargando sala directamente...');
+                        
+                        // Mostrar estado de carga inmediatamente
+                        showLoadingPrivateState();
+                        
+                        try {
+                            const mensajesResponse = await fetch(`${API_BASE}/privado/${currentRoom}/mensajes`, {
+                                headers: { 'Authorization': `Bearer ${authToken}` }
+                            });
+                            
+                            const mensajesData = await mensajesResponse.json();
+                            console.log('Mensajes de la sala:', mensajesData);
+                            
+                            if (mensajesResponse.ok && mensajesData.success) {
+                                // Actualizar el título del chat
+                                document.getElementById('chatTitle').textContent =
+                                    `🔒 ${mensajesData.data?.sala?.nombre || 'Chat Privado'}`;
+                                
+                                // Mostrar los mensajes
+                                displayMessages(mensajesData.data?.mensajes || []);
+                                
+                                console.log('Chat privado cargado y fijado correctamente');
+                                alert('¡Invitación aceptada! Ya puedes chatear en el chat privado.');
+                                
+                                // DESPUÉS de cargar los mensajes, actualizar la lista de salas
+                                setTimeout(async () => {
+                                    const salas = await getPrivateRooms();
+                                    updateRoomsList(salas.data?.salas || [], true);
+                                }, 500);
+                                
+                            } else {
+                                console.error('Error al cargar mensajes:', mensajesData);
+                                throw new Error('Error al cargar mensajes de la sala');
+                            }
+                            
+                        } catch (error) {
+                            console.error('Error al cargar la sala:', error);
+                            alert('Error al cargar el chat privado: ' + error.message);
+                            await loadPrivateChats(true);
+                        }
+                        
+                    } else {
+                        console.log('No se encontró ID de sala, cargando lista de chats privados');
+                        await loadPrivateChats(true);
+                        alert('¡Invitación aceptada! El chat privado está disponible.');
                     }
+                    
+                    // Marcar el proceso como completado después de un delay
+                    setTimeout(() => {
+                        isUserSelectingRoom = false;
+                        console.log('Proceso de aceptación completado');
+                        
+                        // REANUDAR el auto-refresh SOLO después de que todo esté establecido
+                        startAutoRefresh();
+                        console.log('Auto-refresh reanudado');
+                    }, 2000); // 2 segundos de protección
+                    
+                    // Recargar invitaciones en segundo plano mucho más tarde
+                    setTimeout(() => {
+                        updateInvitationBadgeInBackground();
+                    }, 3000);
+                    
                 } else {
                     alert('Error al aceptar invitación: ' + (data.error || 'Error desconocido'));
+                    // Reanudar auto-refresh si hay error
+                    startAutoRefresh();
                 }
             } catch (error) {
                 console.error('Error al aceptar invitación:', error);
                 alert('Error al aceptar invitación');
+                isUserSelectingRoom = false;
+                // Reanudar auto-refresh si hay error
+                startAutoRefresh();
             }
         }
 
