@@ -158,12 +158,11 @@ class ApiAuthController extends AbstractController
             }
         }
 
-        // Marcar estado = false y limpiar token y ubicación
+        // Marcar estado = false y limpiar token (pero mantener ubicación)
         $user->setEstado(false);
         $user->setTokenAutenticacion(null);
-        $user->setLatitud(null);
-        $user->setLongitud(null);
-        $user->setFechaActualizacionUbicacion(null);
+        // NO eliminamos latitud, longitud ni fechaActualizacionUbicacion
+        // para que el usuario mantenga su ubicación al cerrar sesión
 
         $this->entityManager->flush();
 
@@ -261,6 +260,68 @@ class ApiAuthController extends AbstractController
             ], Response::HTTP_FORBIDDEN);
         }
 
+        // Obtener invitaciones enviadas (salas que creó y el otro usuario aún no aceptó)
+        $invitacionesEnviadas = [];
+        $salasCreadas = $this->salaRepository->createQueryBuilder('s')
+            ->where('s.creador = :userId')
+            ->andWhere('s.tipo = :tipo')
+            ->setParameter('userId', $user->getId())
+            ->setParameter('tipo', 'privada')
+            ->getQuery()
+            ->getResult();
+
+        foreach ($salasCreadas as $sala) {
+            $usuariosSala = $sala->getUsuarios();
+            foreach ($usuariosSala as $invitado) {
+                if ($invitado->getId() !== $user->getId()) {
+                    $estado = $sala->isActiva() ? 'aceptada' : 'pendiente';
+                    if (!$sala->isActiva() && !$invitado->isEstado()) {
+                        $estado = 'rechazada';
+                    }
+
+                    $invitacionesEnviadas[] = [
+                        'salaId' => $sala->getId(),
+                        'usuario' => [
+                            'id' => $invitado->getId(),
+                            'nombre' => $invitado->getNombre(),
+                            'correo' => $invitado->getCorreo()
+                        ],
+                        'estado' => $estado,
+                        'fechaCreacion' => $sala->getFechaCreacion()->format('Y-m-d H:i:s')
+                    ];
+                }
+            }
+        }
+
+        // Obtener invitaciones recibidas (salas donde está invitado pero no activas aún)
+        $invitacionesRecibidas = [];
+        $salasInvitado = $this->salaRepository->createQueryBuilder('s')
+            ->innerJoin('s.usuarios', 'u')
+            ->where('u.id = :userId')
+            ->andWhere('s.tipo = :tipo')
+            ->andWhere('s.activa = :activa')
+            ->andWhere('s.creador != :userId')
+            ->setParameter('userId', $user->getId())
+            ->setParameter('tipo', 'privada')
+            ->setParameter('activa', false)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($salasInvitado as $sala) {
+            $creador = $sala->getCreador();
+            if ($creador) {
+                $invitacionesRecibidas[] = [
+                    'id' => $sala->getId(),
+                    'remitente' => [
+                        'id' => $creador->getId(),
+                        'nombre' => $creador->getNombre(),
+                        'correo' => $creador->getCorreo()
+                    ],
+                    'fechaCreacion' => $sala->getFechaCreacion()->format('Y-m-d H:i:s')
+                ];
+            }
+        }
+
         return $this->json([
             'success' => true,
             'data' => [
@@ -272,6 +333,10 @@ class ApiAuthController extends AbstractController
                     'estado' => $user->isEstado(),
                     'latitud' => $user->getLatitud(),
                     'longitud' => $user->getLongitud()
+                ],
+                'invitaciones' => [
+                    'enviadas' => $invitacionesEnviadas,
+                    'recibidas' => $invitacionesRecibidas
                 ]
             ]
         ]);
@@ -809,7 +874,7 @@ class ApiAuthController extends AbstractController
     }
 
     /**
-     * Invitar usuarios a sala privada
+     * Invitar usuarios a sala privada o crear nueva sala privada
      * POST /api/invitar
      */
     #[Route('/invitar', name: 'api_invitar_usuarios', methods: ['POST'])]
@@ -826,30 +891,97 @@ class ApiAuthController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        if (!isset($data['sala_id']) || !isset($data['usuario_id'])) {
+        if (!isset($data['usuario_id'])) {
             return $this->json([
                 'success' => false,
-                'error' => 'Se requieren sala_id y usuario_id'
+                'error' => 'Se requiere usuario_id'
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        // Buscar la sala
-        $sala = $this->salaRepository->find($data['sala_id']);
-        if (!$sala) {
+        $sala = null;
+
+        // Si se proporciona sala_id, agregar usuarios a sala existente
+        if (isset($data['sala_id'])) {
+            $sala = $this->salaRepository->find($data['sala_id']);
+            if (!$sala) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'La sala especificada no existe'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Verificar que el usuario sea participante de la sala
+            if (!$sala->getUsuarios()->contains($user)) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'No tienes acceso a esta sala'
+                ], Response::HTTP_FORBIDDEN);
+            }
+        } else {
+            // Si NO se proporciona sala_id, crear nueva sala privada
+            $usuarioIds = is_array($data['usuario_id']) ? $data['usuario_id'] : [$data['usuario_id']];
+
+            if (count($usuarioIds) !== 1) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'Para crear una sala nueva, solo puedes invitar a un usuario'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $usuarioInvitado = $this->userRepository->find($usuarioIds[0]);
+            if (!$usuarioInvitado) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'El usuario no existe'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Verificar que no exista ya una sala privada entre estos dos usuarios
+            $salaExistente = $this->salaRepository->createQueryBuilder('s')
+                ->innerJoin('s.usuarios', 'u1')
+                ->innerJoin('s.usuarios', 'u2')
+                ->where('s.tipo = :tipo')
+                ->andWhere('u1.id = :userId1')
+                ->andWhere('u2.id = :userId2')
+                ->setParameter('tipo', 'privada')
+                ->setParameter('userId1', $user->getId())
+                ->setParameter('userId2', $usuarioInvitado->getId())
+                ->getQuery()
+                ->getOneOrNullResult();
+
+            if ($salaExistente) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'Ya existe una sala privada con este usuario'
+                ], Response::HTTP_CONFLICT);
+            }
+
+            // Crear nueva sala privada
+            $sala = new Sala();
+            $sala->setNombre('Chat: ' . $user->getNombre() . ' - ' . $usuarioInvitado->getNombre());
+            $sala->setTipo('privada');
+            $sala->setActiva(false); // Inactiva hasta que el otro usuario acepte
+            $sala->setFechaCreacion(new \DateTime());
+            $sala->setCreador($user);
+
+            // Agregar ambos usuarios a la sala
+            $sala->addUsuario($user);
+            $sala->addUsuario($usuarioInvitado);
+
+            $this->entityManager->persist($sala);
+            $this->entityManager->flush();
+
             return $this->json([
-                'success' => false,
-                'error' => 'La sala especificada no existe'
-            ], Response::HTTP_NOT_FOUND);
+                'success' => true,
+                'message' => 'Invitación enviada correctamente',
+                'sala' => [
+                    'id' => $sala->getId(),
+                    'nombre' => $sala->getNombre()
+                ]
+            ]);
         }
 
-        // Verificar que el usuario sea participante de la sala
-        if (!$sala->getUsuarios()->contains($user)) {
-            return $this->json([
-                'success' => false,
-                'error' => 'No tienes acceso a esta sala'
-            ], Response::HTTP_FORBIDDEN);
-        }
-
+        // Agregar usuarios a sala existente
         $usuarioIds = is_array($data['usuario_id']) ? $data['usuario_id'] : [$data['usuario_id']];
         $usuariosInvitados = [];
 
@@ -1083,4 +1215,127 @@ class ApiAuthController extends AbstractController
             'message' => 'Mensaje eliminado correctamente'
         ]);
     }
-}
+
+    /**
+     * Aceptar invitación a sala privada
+     * POST /api/invitacion/{salaId}/aceptar
+     */
+    #[Route('/invitacion/{salaId}/aceptar', name: 'api_aceptar_invitacion', methods: ['POST'])]
+    public function aceptarInvitacion(int $salaId): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Buscar la sala
+        $sala = $this->salaRepository->find($salaId);
+        if (!$sala) {
+            return $this->json([
+                'success' => false,
+                'error' => 'La sala no existe'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verificar que el usuario sea participante de la sala
+        if (!$sala->getUsuarios()->contains($user)) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No tienes acceso a esta sala'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Verificar que el usuario NO sea el creador
+        if ($sala->getCreador() && $sala->getCreador()->getId() === $user->getId()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No puedes aceptar tu propia invitación'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Activar la sala
+        $sala->setActiva(true);
+        $this->entityManager->flush();
+
+        // Obtener participantes
+        $participantes = [];
+        foreach ($sala->getUsuarios() as $participante) {
+            $participantes[] = [
+                'id' => $participante->getId(),
+                'nombre' => $participante->getNombre()
+            ];
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Invitación aceptada',
+            'data' => [
+                'sala' => [
+                    'id' => $sala->getId(),
+                    'nombre' => $sala->getNombre(),
+                    'participantes' => $participantes
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Rechazar invitación a sala privada
+     * POST /api/invitacion/{salaId}/rechazar
+     */
+    #[Route('/invitacion/{salaId}/rechazar', name: 'api_rechazar_invitacion', methods: ['POST'])]
+    public function rechazarInvitacion(int $salaId): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User || !$user->isEstado()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Usuario no autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Buscar la sala
+        $sala = $this->salaRepository->find($salaId);
+        if (!$sala) {
+            return $this->json([
+                'success' => false,
+                'error' => 'La sala no existe'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verificar que el usuario sea participante de la sala
+        if (!$sala->getUsuarios()->contains($user)) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No tienes acceso a esta sala'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Verificar que el usuario NO sea el creador
+        if ($sala->getCreador() && $sala->getCreador()->getId() === $user->getId()) {
+            return $this->json([
+                'success' => false,
+                'error' => 'No puedes rechazar tu propia invitación'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Eliminar todos los mensajes de la sala
+        $mensajes = $this->mensageRepository->findBy(['sala' => $sala]);
+        foreach ($mensajes as $mensaje) {
+            $this->entityManager->remove($mensaje);
+        }
+
+        // Eliminar la sala completamente
+        $this->entityManager->remove($sala);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Invitación rechazada'
+        ]);
+    }}

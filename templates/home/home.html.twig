@@ -687,7 +687,7 @@
                 modalSalaPrivada = new bootstrap.Modal(document.getElementById('modalSalaPrivada'));
             }
 
-            // Cargar usuarios disponibles
+            // Cargar usuarios disponibles (solo los que tienen estado = true)
             const container = document.getElementById('usuarios-disponibles-container');
             container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
 
@@ -698,20 +698,27 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    const usuarios = data.data?.usuarios || [];
+                    const usuarios = data.data || [];
+                    // La API ya filtra usuarios activos (estado = true)
                     if (usuarios.length === 0) {
-                        container.innerHTML = '<div class="alert alert-info">No hay usuarios disponibles</div>';
+                        container.innerHTML = '<div class="alert alert-info">No hay usuarios disponibles en este momento</div>';
                     } else {
                         let html = '<div class="list-group">';
                         usuarios.forEach(usuario => {
+                            // Mostrar información adicional del usuario
+                            const distanciaTexto = usuario.distancia !== null
+                                ? `<small class="text-muted">📍 ${usuario.distancia.toFixed(2)} km</small>`
+                                : '<small class="text-muted">📍 Ubicación desconocida</small>';
+
                             html += `
                                 <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                                        onclick="crearSalaPrivada(${usuario.id}, '${usuario.nombre}')">
+                                        onclick="crearSalaPrivada(${usuario.id}, '${usuario.nombre.replace(/'/g, "\\'")}')">
                                     <div>
-                                        <h6 class="mb-0">${usuario.nombre}</h6>
-                                        <small class="text-muted">${usuario.correo}</small>
+                                        <h6 class="mb-0">👤 ${usuario.nombre}</h6>
+                                        <small class="text-muted">${usuario.correo}</small><br>
+                                        ${distanciaTexto}
                                     </div>
-                                    <span class="badge bg-primary">Crear sala</span>
+                                    <span class="badge bg-success">✓ Disponible</span>
                                 </button>
                             `;
                         });
@@ -731,13 +738,13 @@
         // Crear sala privada con un usuario (enviar invitación)
         async function crearSalaPrivada(usuarioId, nombreUsuario) {
             try {
-                const response = await fetch(baseUrl + '/api/sala-privada/crear', {
+                const response = await fetch(baseUrl + '/api/invitar', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ usuarioId })
+                    body: JSON.stringify({ usuario_id: usuarioId })
                 });
 
                 const data = await response.json();
@@ -745,7 +752,8 @@
                 if (response.ok && data.success) {
                     showMessage(`✓ ${data.message}`, 'success');
                     modalSalaPrivada.hide();
-                    // No abrir la sala, solo notificar que se envió la invitación
+                    // Actualizar invitaciones para mostrar la invitación enviada
+                    cargarInvitacionesPendientes();
                 } else {
                     showMessage('⚠️ ' + (data.error || 'Error al enviar invitación'), 'error');
                 }
@@ -760,52 +768,98 @@
             container.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div></div>';
 
             try {
-                const response = await fetch(baseUrl + '/api/invitaciones-pendientes', {
+                const response = await fetch(baseUrl + '/api/perfil', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    const invitaciones = data.data?.invitaciones || [];
-                    if (invitaciones.length === 0) {
-                        container.innerHTML = '<div class="alert alert-info">📭 No tienes invitaciones pendientes</div>';
+                    const invitacionesRecibidas = data.data?.invitaciones?.recibidas || [];
+                    const invitacionesEnviadas = data.data?.invitaciones?.enviadas || [];
+
+                    if (invitacionesRecibidas.length === 0 && invitacionesEnviadas.length === 0) {
+                        container.innerHTML = '<div class="alert alert-info">📭 No tienes invitaciones</div>';
                     } else {
-                        let html = '<div class="row g-3">';
-                        invitaciones.forEach(inv => {
-                            html += `
-                                <div class="col-md-6">
-                                    <div class="card border-warning shadow-sm">
-                                        <div class="card-body">
-                                            <div class="d-flex align-items-center mb-3">
-                                                <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3"
-                                                     style="width:50px;height:50px;font-size:24px">
-                                                    ${inv.remitente.nombre.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-0 fw-bold">${inv.remitente.nombre}</h6>
-                                                    <small class="text-muted">${inv.remitente.correo}</small>
-                                                    <div class="small text-muted mt-1">
-                                                        ${new Date(inv.fechaCreacion).toLocaleString()}
+                        let html = '';
+
+                        // Mostrar invitaciones recibidas (pendientes de aceptar/rechazar)
+                        if (invitacionesRecibidas.length > 0) {
+                            html += '<h6 class="mb-3">📬 Invitaciones Recibidas:</h6><div class="row g-3 mb-4">';
+                            invitacionesRecibidas.forEach(inv => {
+                                html += `
+                                    <div class="col-md-6">
+                                        <div class="card border-warning shadow-sm">
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                         style="width:50px;height:50px;font-size:24px">
+                                                        ${inv.remitente.nombre.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-0 fw-bold">${inv.remitente.nombre}</h6>
+                                                        <small class="text-muted">${inv.remitente.correo}</small>
+                                                        <div class="small text-muted mt-1">
+                                                            ${new Date(inv.fechaCreacion).toLocaleString()}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <p class="text-muted small mb-3">Te ha enviado una invitación para chatear</p>
-                                            <div class="d-flex gap-2">
-                                                <button class="btn btn-success btn-sm flex-grow-1"
-                                                        onclick="aceptarInvitacion(${inv.id}, '${inv.remitente.nombre}')">
-                                                    ✓ Aceptar
-                                                </button>
-                                                <button class="btn btn-danger btn-sm flex-grow-1"
-                                                        onclick="rechazarInvitacion(${inv.id})">
-                                                    ✗ Rechazar
-                                                </button>
+                                                <p class="text-muted small mb-3">Te ha enviado una invitación para chatear</p>
+                                                <div class="d-flex gap-2">
+                                                    <button class="btn btn-success btn-sm flex-grow-1"
+                                                            onclick="aceptarInvitacion(${inv.id}, '${inv.remitente.nombre.replace(/'/g, "\\'")}')">
+                                                        ✓ Aceptar
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm flex-grow-1"
+                                                            onclick="rechazarInvitacion(${inv.id})">
+                                                        ✗ Rechazar
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            `;
-                        });
-                        html += '</div>';
+                                `;
+                            });
+                            html += '</div>';
+                        }
+
+                        // Mostrar invitaciones enviadas con su estado
+                        if (invitacionesEnviadas.length > 0) {
+                            html += '<h6 class="mb-3">📤 Invitaciones Enviadas:</h6><div class="row g-3">';
+                            invitacionesEnviadas.forEach(inv => {
+                                const estadoClass = inv.estado === 'aceptada' ? 'success' :
+                                                   inv.estado === 'rechazada' ? 'danger' : 'warning';
+                                const estadoIcon = inv.estado === 'aceptada' ? '✓' :
+                                                  inv.estado === 'rechazada' ? '✗' : '⏳';
+                                const estadoTexto = inv.estado === 'aceptada' ? 'Aceptada' :
+                                                   inv.estado === 'rechazada' ? 'Rechazada' : 'Pendiente';
+
+                                html += `
+                                    <div class="col-md-6">
+                                        <div class="card border-${estadoClass} shadow-sm">
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <div class="bg-${estadoClass} text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                         style="width:50px;height:50px;font-size:24px">
+                                                        ${inv.usuario.nombre.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-0 fw-bold">${inv.usuario.nombre}</h6>
+                                                        <small class="text-muted">${inv.usuario.correo}</small>
+                                                        <div class="small text-muted mt-1">
+                                                            ${new Date(inv.fechaCreacion).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                    <span class="badge bg-${estadoClass}">${estadoIcon} ${estadoTexto}</span>
+                                                </div>
+                                                <p class="text-muted small mb-0">Has enviado una invitación para chatear</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            html += '</div>';
+                        }
+
                         container.innerHTML = html;
                     }
                 } else {

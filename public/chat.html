@@ -459,6 +459,97 @@
         .hidden {
             display: none !important;
         }
+
+        /* Invitaciones */
+        .invitation-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #34495e;
+            border-radius: 8px;
+            border-left: 4px solid #f39c12;
+        }
+
+        .invitation-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .invitation-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .invitation-info {
+            flex: 1;
+        }
+
+        .invitation-sender {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .invitation-time {
+            font-size: 11px;
+            color: #95a5a6;
+        }
+
+        .invitation-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-accept {
+            flex: 1;
+            padding: 8px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .btn-accept:hover {
+            background: #229954;
+        }
+
+        .btn-reject {
+            flex: 1;
+            padding: 8px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .btn-reject:hover {
+            background: #c0392b;
+        }
+
+        .invitation-badge {
+            background: #f39c12;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
@@ -502,6 +593,9 @@
                 </div>
                 <div class="chat-tab" onclick="switchTab('private')">
                     🔒 Privados
+                </div>
+                <div class="chat-tab" onclick="switchTab('invitations')">
+                    📨 Invitaciones<span class="invitation-badge" id="invitationBadge" style="display: none;">0</span>
                 </div>
             </div>
 
@@ -580,6 +674,17 @@
 
                     updateUserInfo();
                     loadChatData();
+
+                    // Cargar invitaciones para actualizar el badge
+                    fetch(`${API_BASE}/perfil`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    }).then(r => r.json()).then(perfil => {
+                        if (perfil.success) {
+                            const invitaciones = perfil.data?.invitaciones?.recibidas || [];
+                            updateInvitationBadge(invitaciones.length);
+                        }
+                    });
+
                     startAutoRefresh();
                 } else {
                     errorDiv.textContent = data.error || 'Error al iniciar sesión';
@@ -606,8 +711,10 @@
 
             if (tab === 'general') {
                 loadGeneralChat();
-            } else {
+            } else if (tab === 'private') {
                 loadPrivateChats();
+            } else if (tab === 'invitations') {
+                loadInvitations();
             }
         }
 
@@ -615,9 +722,19 @@
         async function loadChatData() {
             if (currentTab === 'general') {
                 await loadGeneralChat();
-            } else {
-                await loadPrivateChats();
+            } else if (currentTab === 'private') {
+                // Si hay una sala seleccionada, solo recargar sus mensajes
+                if (currentRoom) {
+                    await reloadCurrentRoom();
+                } else {
+                    await loadPrivateChats();
+                }
+            } else if (currentTab === 'invitations') {
+                await loadInvitations();
             }
+
+            // Actualizar badge de invitaciones en segundo plano
+            updateInvitationBadgeInBackground();
         }
 
         // Cargar chat general
@@ -664,8 +781,17 @@
                     updateRoomsList(salas, true);
 
                     if (salas && salas.length > 0) {
-                        selectPrivateRoom(salas[0].id);
+                        // Si ya hay una sala seleccionada y existe en la lista, mantenerla
+                        const salaExiste = currentRoom && salas.some(s => s.id === currentRoom);
+                        if (salaExiste) {
+                            // Mantener la sala actual y solo recargar sus mensajes
+                            await reloadCurrentRoom();
+                        } else {
+                            // Seleccionar la primera sala
+                            selectPrivateRoom(salas[0].id);
+                        }
                     } else {
+                        currentRoom = null;
                         showEmptyPrivateState();
                     }
                 }
@@ -712,6 +838,27 @@
 
                 roomsList.appendChild(roomEl);
             });
+        }
+
+        // Recargar mensajes de la sala actual
+        async function reloadCurrentRoom() {
+            if (!currentRoom) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/sala-privada/${currentRoom}/mensajes`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayMessages(data.data?.mensajes || []);
+                    // Actualizar lista de salas sin cambiar la selección
+                    updateRoomsList(await getPrivateRooms(), true);
+                }
+            } catch (error) {
+                console.error('Error al recargar sala:', error);
+            }
         }
 
         // Seleccionar sala privada
@@ -879,6 +1026,151 @@
                     <p>Crea una sala privada para empezar</p>
                 </div>
             `;
+        }
+
+        // Cargar invitaciones
+        async function loadInvitations() {
+            try {
+                const response = await fetch(`${API_BASE}/perfil`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const invitaciones = data.data?.invitaciones?.recibidas || [];
+                    displayInvitations(invitaciones);
+                    updateInvitationBadge(invitaciones.length);
+                }
+            } catch (error) {
+                console.error('Error al cargar invitaciones:', error);
+            }
+        }
+
+        // Mostrar invitaciones
+        function displayInvitations(invitaciones) {
+            const roomsList = document.getElementById('roomsList');
+            const container = document.getElementById('messagesContainer');
+
+            roomsList.innerHTML = '';
+            container.innerHTML = '';
+
+            if (invitaciones.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>No tienes invitaciones pendientes</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="padding: 20px;">
+                    <h3 style="color: #2c3e50; margin-bottom: 20px;">📨 Invitaciones Pendientes (${invitaciones.length})</h3>
+                    <div id="invitationsList"></div>
+                </div>
+            `;
+
+            const invitationsList = document.getElementById('invitationsList');
+
+            invitaciones.forEach(inv => {
+                const invEl = document.createElement('div');
+                invEl.className = 'invitation-item';
+                invEl.innerHTML = `
+                    <div class="invitation-header">
+                        <div class="invitation-icon">👤</div>
+                        <div class="invitation-info">
+                            <div class="invitation-sender">${inv.remitente.nombre}</div>
+                            <div class="invitation-time">${inv.remitente.correo}</div>
+                        </div>
+                    </div>
+                    <div class="invitation-actions">
+                        <button class="btn-accept" onclick="acceptInvitation(${inv.id})">✓ Aceptar</button>
+                        <button class="btn-reject" onclick="rejectInvitation(${inv.id})">✗ Rechazar</button>
+                    </div>
+                `;
+                invitationsList.appendChild(invEl);
+            });
+        }
+
+        // Actualizar badge de invitaciones
+        function updateInvitationBadge(count) {
+            const badge = document.getElementById('invitationBadge');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Actualizar badge de invitaciones en segundo plano
+        async function updateInvitationBadgeInBackground() {
+            try {
+                const response = await fetch(`${API_BASE}/perfil`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const invitaciones = data.data?.invitaciones?.recibidas || [];
+                    updateInvitationBadge(invitaciones.length);
+                }
+            } catch (error) {
+                // Silencioso, no molestamos al usuario
+            }
+        }
+
+        // Aceptar invitación
+        async function acceptInvitation(salaId) {
+            try {
+                const response = await fetch(`${API_BASE}/invitacion/${salaId}/aceptar`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('¡Invitación aceptada! El chat privado está disponible.');
+                    // Recargar invitaciones y cambiar a tab de privados
+                    await loadInvitations();
+                    // Cambiar automáticamente a chats privados y abrir la nueva sala
+                    document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.chat-tab')[1].classList.add('active');
+                    await loadPrivateChats();
+                    if (data.data?.sala?.id) {
+                        selectPrivateRoom(data.data.sala.id);
+                    }
+                } else {
+                    alert('Error al aceptar invitación: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error al aceptar invitación:', error);
+                alert('Error al aceptar invitación');
+            }
+        }
+
+        // Rechazar invitación
+        async function rejectInvitation(salaId) {
+            try {
+                const response = await fetch(`${API_BASE}/invitacion/${salaId}/rechazar`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Invitación rechazada');
+                    loadInvitations();
+                } else {
+                    alert('Error al rechazar invitación: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error al rechazar invitación:', error);
+                alert('Error al rechazar invitación');
+            }
         }
     </script>
 </body>
