@@ -1,0 +1,16 @@
+$f = 'c:\xampp\htdocs\Proyecto_Usuarios\templates\home\api_docs.html.twig'
+$c = [IO.File]::ReadAllText($f, [Text.Encoding]::GetEncoding('iso-8859-1'))
+$c = $c.Replace('ðŸ"š','📚')
+$c = $c.Replace('ðŸ"','🔍')
+$c = $c.Replace('ðŸ"','🔐')
+$c = $c.Replace('ðŸ'¥','👥')
+$c = $c.Replace('ðŸ'¬','💬')
+$c = $c.Replace('ðŸ"'','🔒')
+$c = $c.Replace('âœ‰ï¸','✉️')
+$c = $c.Replace('âœ"','✓')
+$c = $c.Replace('â†','←')
+$c = $c.Replace('â†'','↑')
+$c = $c.Replace('SECCIÃ"N','SECCIÓN')
+$c = $c.Replace('AUTENTICACIÃ"N','AUTENTICACIÓN')
+[IO.File]::WriteAllText($f, $c, [Text.UTF8Encoding]::new($false))
+Write-Host 'OK' -ForegroundColor Green

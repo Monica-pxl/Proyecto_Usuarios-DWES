@@ -1,4 +1,4 @@
-# 🎉 Sistema de Autenticación API Completado
+## 🎉 Sistema de Autenticación y Chat API Completado
 
 ## ✅ Resumen de lo implementado
 
@@ -10,6 +10,18 @@
   - `POST /api/logout` - Cierre de sesión
   - `POST /api/register` - Registro de nuevos usuarios
   - `GET /api/perfil` - Obtener datos del usuario autenticado
+  - `GET /api/home` - Página de inicio
+  - `GET /api/usuarios` - Lista de usuarios
+  - `POST /api/actualizar` - Actualizar perfil
+  - `GET /api/general` - Obtener mensajes del chat general
+  - `POST /api/general` - Enviar mensaje al chat general
+  - `GET /api/privado` - Obtener datos del chat privado actual
+  - `POST /api/privado/cambiarchat` - Cambiar de sala privada
+  - `POST /api/privado/salir` - Salir de sala privada
+  - `POST /api/invitar` - Invitar usuario a sala privada
+  - `GET /api/mensaje` - Obtener mensajes
+  - `POST /api/mensaje` - Enviar mensaje
+  - `DELETE /api/mensaje` - Eliminar mensaje
 
 - ✅ **src/Controller/HomeController.php**
   - `GET /` - Página de inicio protegida
@@ -147,6 +159,18 @@
 | POST | `/api/login` | ❌ No | Autentica y genera token |
 | POST | `/api/logout` | ✅ Sí | Cierra sesión |
 | GET | `/api/perfil` | ✅ Sí | Obtiene datos del usuario |
+| GET | `/api/home` | ✅ Sí | Página de inicio |
+| GET | `/api/usuarios` | ✅ Sí | Lista de usuarios |
+| POST | `/api/actualizar` | ✅ Sí | Actualizar perfil |
+| GET | `/api/general` | ✅ Sí | Obtener mensajes del chat general |
+| POST | `/api/general` | ✅ Sí | Enviar mensaje al chat general |
+| GET | `/api/privado` | ✅ Sí | Obtener datos del chat privado |
+| POST | `/api/privado/cambiarchat` | ✅ Sí | Cambiar de sala privada |
+| POST | `/api/privado/salir` | ✅ Sí | Salir de sala privada |
+| POST | `/api/invitar` | ✅ Sí | Invitar usuario a sala |
+| GET | `/api/mensaje` | ✅ Sí | Obtener mensajes |
+| POST | `/api/mensaje` | ✅ Sí | Enviar mensaje |
+| DELETE | `/api/mensaje` | ✅ Sí | Eliminar mensaje |
 | GET | `/` | 🔓 Opcional | Página de inicio (muestra login o home) |
 
 ---
@@ -198,6 +222,9 @@ Importa el archivo `postman_collection.json`
 - ✅ POST `/api/login` con verificación y generación de token
 - ✅ POST `/api/logout` con limpieza de token y estado
 - ✅ POST `/api/register` con hash de contraseña
+- ✅ Sistema de chat general implementado
+- ✅ Sistema de salas privadas implementado
+- ✅ Gestión de mensajes completa
 - ✅ GET `/api/perfil` con autenticación Bearer
 - ✅ Verificación de `estado = true` en rutas protegidas
 - ✅ HomeController con vista protegida
