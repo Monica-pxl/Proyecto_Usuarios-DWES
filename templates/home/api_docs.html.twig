@@ -430,6 +430,14 @@
     </div>
 
     <div class="content">
+        <!-- Información de configuración -->
+        <div style="background: #e7f3ff; border: 2px solid #007bff; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+            <h4 style="color: #004085; margin-bottom: 10px;">⚙️ Configuración de la API</h4>
+            <p style="color: #004085; margin: 0;">
+                <strong>URL Base detectada:</strong> <code id="api-base-url-display" style="background: #fff; padding: 3px 8px; border-radius: 3px;">Cargando...</code>
+            </p>
+        </div>
+
         <!-- Información sobre testing -->
         <div style="background: #e8f5e8; border: 2px solid #28a745; border-radius: 10px; padding: 20px; margin-bottom: 30px;">
             <h3 style="color: #155724; margin-bottom: 15px;">🧪 Testing de Endpoints</h3>
@@ -531,8 +539,30 @@
                 <!-- SECCIÃ"N DE TESTING -->
                 <div id="test-register" class="test-section">
                     <h4>🧪 Probar este endpoint</h4>
-                    <p><strong>Datos de entrada (JSON):</strong></p>
-                    <textarea class="test-input" name="body" rows="6" placeholder='{"nombre": "Usuario Prueba", "correo": "test@example.com", "password": "123456", "latitud": 40.4168, "longitud": -3.7038}'></textarea>
+                    <div style="display: grid; gap: 10px;">
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Nombre:</label>
+                            <input type="text" class="test-input" name="nombre" placeholder="Juan Pérez" value="Usuario Prueba">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Correo:</label>
+                            <input type="email" class="test-input" name="correo" placeholder="usuario@example.com" value="test@example.com">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Password:</label>
+                            <input type="password" class="test-input" name="password" placeholder="123456" value="123456">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label style="font-weight: 600; display: block; margin-bottom: 5px;">Latitud (opcional):</label>
+                                <input type="number" step="any" class="test-input" name="latitud" placeholder="40.4168" value="40.4168">
+                            </div>
+                            <div>
+                                <label style="font-weight: 600; display: block; margin-bottom: 5px;">Longitud (opcional):</label>
+                                <input type="number" step="any" class="test-input" name="longitud" placeholder="-3.7038" value="-3.7038">
+                            </div>
+                        </div>
+                    </div>
                     <button class="execute-button" onclick="testEndpoint('register', 'POST', '/api/register')">🚀 Ejecutar</button>
                     <div class="test-output"></div>
                 </div>
@@ -596,8 +626,26 @@
                 <!-- SECCIÃ"N DE TESTING -->
                 <div id="test-login" class="test-section">
                     <h4>🧪 Probar este endpoint</h4>
-                    <p><strong>Datos de entrada (JSON):</strong></p>
-                    <textarea class="test-input" name="body" rows="4" placeholder='{"correo": "admin@test.com", "password": "admin1234"}'></textarea>
+                    <div style="display: grid; gap: 10px;">
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Correo:</label>
+                            <input type="email" class="test-input" name="correo" placeholder="usuario@example.com" value="admin@test.com">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Password:</label>
+                            <input type="password" class="test-input" name="password" placeholder="123456" value="admin1234">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label style="font-weight: 600; display: block; margin-bottom: 5px;">Latitud (opcional):</label>
+                                <input type="number" step="any" class="test-input" name="latitud" placeholder="40.4168">
+                            </div>
+                            <div>
+                                <label style="font-weight: 600; display: block; margin-bottom: 5px;">Longitud (opcional):</label>
+                                <input type="number" step="any" class="test-input" name="longitud" placeholder="-3.7038">
+                            </div>
+                        </div>
+                    </div>
                     <button class="execute-button" onclick="testEndpoint('login', 'POST', '/api/login')">🚀 Ejecutar</button>
                     <div class="test-output"></div>
                 </div>
@@ -609,6 +657,7 @@
                     <span class="method method-post">POST</span>
                     <span class="endpoint-path">/api/logout</span>
                     <span class="access-badge access-protected">Requiere Token</span>
+                    <button class="test-button" onclick="toggleTestSection('logout')">🧪 Probar endpoint</button>
                 </div>
                 <div class="endpoint-description">
                     Cierra la sesión del usuario. Invalida el token, marca al usuario como inactivo y elimina sus salas privadas si no quedan otros usuarios activos.
@@ -638,6 +687,14 @@
                             <code>{"success": false, "error": "No autenticado"}</code>
                         </div>
                     </div>
+                </div>
+
+                <!-- SECCIÓN DE TESTING -->
+                <div id="test-logout" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <p style="color: #666; margin-bottom: 10px;">Este endpoint no requiere parámetros, solo el token de autenticación.</p>
+                    <button class="execute-button" onclick="testEndpoint('logout', 'POST', '/api/logout')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
                 </div>
             </div>
         </section>
@@ -702,7 +759,7 @@
                 <div class="endpoint-header">
                     <span class="method method-post">POST</span>
                     <span class="endpoint-path">/api/actualizar</span>
-                    <span class="access-badge access-protected">ðŸ”’ Requiere Token</span>
+                    <span class="access-badge access-protected">ðŸ”’ Requiere Token</span>`n                    <button class="test-button" onclick="toggleTestSection('actualizar')">🧪 Probar endpoint</button>
                 </div>
                 <div class="endpoint-description">
                     Actualiza las coordenadas GPS del usuario autenticado.
@@ -742,6 +799,23 @@
                             <code>{"success": false, "error": "Se requieren latitud y longitud"}</code>
                         </div>
                     </div>
+                </div>
+
+                <!-- SECCIÃ"N DE TESTING -->
+                <div id="test-actualizar" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Latitud:</label>
+                            <input type="number" step="any" class="test-input" name="latitud" placeholder="40.4168" value="40.4168">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Longitud:</label>
+                            <input type="number" step="any" class="test-input" name="longitud" placeholder="-3.7038" value="-3.7038">
+                        </div>
+                    </div>
+                    <button class="execute-button" onclick="testEndpoint('actualizar', 'POST', '/api/actualizar')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
                 </div>
             </div>
 
@@ -917,6 +991,7 @@
                     <span class="method method-post">POST</span>
                     <span class="endpoint-path">/api/general</span>
                     <span class="access-badge access-protected">Requiere Token</span>
+                    <button class="test-button" onclick="toggleTestSection('general-post')">🧪 Probar endpoint</button>
                 </div>
                 <div class="endpoint-description">
                     Envía un mensaje al chat general. Devuelve información adicional del sistema.
@@ -968,6 +1043,17 @@
                             <code>{"success": false, "error": "El contenido del mensaje es requerido"}</code>
                         </div>
                     </div>
+                </div>
+
+                <!-- SECCIÃ"N DE TESTING -->
+                <div id="test-general-post" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Contenido del mensaje:</label>
+                        <textarea class="test-input" name="contenido" rows="3" placeholder="Escribe tu mensaje aquí...">Hola desde la documentación</textarea>
+                    </div>
+                    <button class="execute-button" onclick="testEndpoint('general-post', 'POST', '/api/general')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
                 </div>
             </div>
         </section>
@@ -1219,6 +1305,17 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- SECCIÃ"N DE TESTING -->
+                <div id="test-cambiarchat" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">ID de la sala:</label>
+                        <input type="number" class="test-input" name="sala_id" placeholder="5" value="5">
+                    </div>
+                    <button class="execute-button" onclick="testEndpoint('cambiarchat', 'POST', '/api/privado/cambiarchat')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
+                </div>
             </div>
 
             <!-- POST /api/privado/salir -->
@@ -1227,6 +1324,7 @@
                     <span class="method method-post">POST</span>
                     <span class="endpoint-path">/api/privado/salir</span>
                     <span class="access-badge access-protected">Requiere Token</span>
+                    <button class="test-button" onclick="toggleTestSection('salir')">🧪 Probar endpoint</button>
                 </div>
                 <div class="endpoint-description">
                     Sale de una sala privada. Elimina los mensajes del usuario en la sala y si no quedan otros usuarios activos, elimina la sala completa.
@@ -1277,6 +1375,17 @@
                             <code>{"success": false, "error": "No puedes salir de una sala en la que no participas"}</code>
                         </div>
                     </div>
+                </div>
+
+                <!-- SECCIÓN DE TESTING -->
+                <div id="test-salir" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">ID de la sala:</label>
+                        <input type="number" class="test-input" name="sala_id" placeholder="5" value="5">
+                    </div>
+                    <button class="execute-button" onclick="testEndpoint('salir', 'POST', '/api/privado/salir')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
                 </div>
             </div>
         </section>
@@ -1346,6 +1455,24 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- SECCIÃ"N DE TESTING -->
+                <div id="test-invitar" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <div style="display: grid; gap: 10px;">
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">ID de la sala:</label>
+                            <input type="number" class="test-input" name="sala_id" placeholder="5" value="5">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">ID(s) de usuario(s) (separados por comas):</label>
+                            <input type="text" class="test-input" name="usuario_id" placeholder="6,7" value="6">
+                            <small style="color: #666;">Ej: "6" o "6,7" para múltiples usuarios</small>
+                        </div>
+                    </div>
+                    <button class="execute-button" onclick="testEndpoint('invitar', 'POST', '/api/invitar')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
+                </div>
             </div>
 
             <!-- POST /api/mensaje -->
@@ -1410,9 +1537,17 @@
                 <!-- SECCIÃ"N DE TESTING -->
                 <div id="test-mensaje-post" class="test-section">
                     <h4>🧪 Probar este endpoint</h4>
-                    <p><strong>Datos de entrada (JSON):</strong></p>
-                    <textarea class="test-input" name="body" rows="3" placeholder='{"contenido": "¡Hola desde la documentación!"}'></textarea>
-                    <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">💡 Este endpoint requiere token de autenticación</p>
+                    <div style="display: grid; gap: 10px;">
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Contenido:</label>
+                            <textarea class="test-input" name="contenido" rows="3" placeholder="Escribe tu mensaje...">¡Hola desde la documentación!</textarea>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">ID de la sala (opcional):</label>
+                            <input type="number" class="test-input" name="sala_id" placeholder="Dejar vacío para chat general">
+                            <small style="color: #666;">Dejar vacío para enviar al chat general</small>
+                        </div>
+                    </div>
                     <button class="execute-button" onclick="testEndpoint('mensaje-post', 'POST', '/api/mensaje')">🚀 Ejecutar</button>
                     <div class="test-output"></div>
                 </div>
@@ -1477,6 +1612,7 @@
                     <span class="method method-delete">DELETE</span>
                     <span class="endpoint-path">/api/mensaje</span>
                     <span class="access-badge access-protected">Requiere Token</span>
+                    <button class="test-button" onclick="toggleTestSection('mensaje-delete')">🧪 Probar endpoint</button>
                 </div>
                 <div class="endpoint-description">
                     Elimina un mensaje específico. Solo el autor puede eliminar sus propios mensajes.
@@ -1521,6 +1657,17 @@
                             <code>{"success": false, "error": "No puedes eliminar un mensaje que no es tuyo"}</code>
                         </div>
                     </div>
+                </div>
+
+                <!-- SECCIÃ"N DE TESTING -->
+                <div id="test-mensaje-delete" class="test-section">
+                    <h4>🧪 Probar este endpoint</h4>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">ID del mensaje a eliminar:</label>
+                        <input type="number" class="test-input" name="mensaje_id" placeholder="20" value="20">
+                    </div>
+                    <button class="execute-button" onclick="testEndpoint('mensaje-delete', 'DELETE', '/api/mensaje')">🚀 Ejecutar</button>
+                    <div class="test-output"></div>
                 </div>
             </div>
         </section>
@@ -1575,6 +1722,12 @@
 <a href="#" class="back-to-top" title="Volver arriba">â†‘</a>
 
 <script>
+    // Configuración de la URL base de la API
+    // Obtener la URL base correcta desde el servidor usando Twig
+    const API_BASE_URL = '{{ app.request.schemeAndHttpHost ~ app.request.baseUrl }}';
+
+    console.log('API Base URL detectada:', API_BASE_URL);
+
     // Smooth scroll para los enlaces de navegación
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -1610,35 +1763,43 @@
         const testSection = document.getElementById('test-' + endpointId);
         const executeButton = testSection.querySelector('.execute-button');
         const outputDiv = testSection.querySelector('.test-output');
-        
+
         // Obtener token del localStorage
         const token = localStorage.getItem('api_token');
-        
+
         executeButton.disabled = true;
         executeButton.textContent = 'Ejecutando...';
-        
+
         try {
             // Construir datos de request
             let requestData = {};
             const inputs = testSection.querySelectorAll('.test-input');
-            
+
             inputs.forEach(input => {
-                if (input.value.trim()) {
-                    try {
-                        // Si el input contiene JSON, parsearlo
-                        if (input.value.trim().startsWith('{') || input.value.trim().startsWith('[')) {
-                            requestData = JSON.parse(input.value);
-                        } else {
-                            // Si es un valor simple, agregarlo como parámetro
-                            requestData[input.name || 'data'] = input.value;
+                const value = input.value.trim();
+                const name = input.name;
+
+                if (value && name) {
+                    // Manejar casos especiales
+                    if (name === 'usuario_id' && value.includes(',')) {
+                        // Convertir lista separada por comas a array de números
+                        requestData[name] = value.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+                    } else if (input.type === 'number') {
+                        // Convertir a número si es un campo numérico y tiene valor
+                        const num = parseFloat(value);
+                        if (!isNaN(num)) {
+                            requestData[name] = num;
                         }
-                    } catch (e) {
-                        // Si no es JSON válido, usar como string
-                        requestData[input.name || 'data'] = input.value;
+                    } else if (input.type === 'password' || input.type === 'email' || input.type === 'text' || input.tagName === 'TEXTAREA') {
+                        // Agregar como string
+                        requestData[name] = value;
+                    } else {
+                        // Por defecto, agregar el valor como está
+                        requestData[name] = value;
                     }
                 }
             });
-            
+
             // Configurar request
             const config = {
                 method: method,
@@ -1647,32 +1808,72 @@
                     'Accept': 'application/json'
                 }
             };
-            
+
             // Agregar token si existe
             if (token) {
                 config.headers['Authorization'] = 'Bearer ' + token;
             }
-            
+
             // Agregar body para métodos que lo requieren
-            if (method !== 'GET' && method !== 'DELETE' && Object.keys(requestData).length > 0) {
+            if (method !== 'GET' && Object.keys(requestData).length > 0) {
+                config.body = JSON.stringify(requestData);
+            } else if (method === 'DELETE' && Object.keys(requestData).length > 0) {
                 config.body = JSON.stringify(requestData);
             }
-            
+
+            // Construir URL completa
+            const fullUrl = API_BASE_URL + url;
+
+            // Mostrar URL que se está llamando (para debugging)
+            console.log('Llamando a:', fullUrl);
+            console.log('Método:', method);
+            console.log('Datos:', requestData);
+
             // Ejecutar request
-            const response = await fetch(url, config);
-            const responseData = await response.json();
-            
+            const response = await fetch(fullUrl, config);
+
+            // Verificar el content-type de la respuesta
+            const contentType = response.headers.get('content-type');
+            let responseData;
+
+            if (contentType && contentType.includes('application/json')) {
+                responseData = await response.json();
+            } else {
+                // Si no es JSON, probablemente es una página de error HTML de Symfony
+                const textResponse = await response.text();
+
+                // Intentar extraer el mensaje de error del título HTML
+                const titleMatch = textResponse.match(/<title>(.*?)<\/title>/);
+                const errorMessage = titleMatch ? titleMatch[1] : 'Error desconocido';
+
+                // Crear un objeto de respuesta simulado para mostrar el error de forma consistente
+                responseData = {
+                    success: false,
+                    error: errorMessage,
+                    details: `Status: ${response.status} ${response.statusText}`,
+                    raw_response: textResponse.substring(0, 200) + '...'
+                };
+            }
+
             // Mostrar resultado
             const result = {
+                url: fullUrl,
                 status: response.status,
                 statusText: response.statusText,
                 headers: Object.fromEntries(response.headers),
                 data: responseData
             };
-            
+
             outputDiv.textContent = JSON.stringify(result, null, 2);
             outputDiv.style.color = response.ok ? '#a9dc76' : '#ff6b6b';
-            
+
+            // Si es login exitoso, guardar el token automáticamente
+            if (endpointId === 'login' && response.ok && responseData.token) {
+                localStorage.setItem('api_token', responseData.token);
+                updateTokenStatus();
+                outputDiv.textContent += '\n\n✅ Token guardado automáticamente';
+            }
+
         } catch (error) {
             outputDiv.textContent = 'Error: ' + error.message;
             outputDiv.style.color = '#ff6b6b';
@@ -1710,10 +1911,20 @@
         }
     }
 
+    // Función para actualizar el display de la URL base
+    function updateApiBaseUrl() {
+        const displayElement = document.getElementById('api-base-url-display');
+        if (displayElement) {
+            displayElement.textContent = API_BASE_URL;
+        }
+    }
+
     // Inicializar
     document.addEventListener('DOMContentLoaded', function() {
         updateTokenStatus();
+        updateApiBaseUrl();
     });
 </script>
 {% endblock %}
+
 

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Docs - Mejoras Pendientes</title>
+</head>
+<body>
+<h1>Mejoras Implementadas en api_docs.html.twig</h1>
+
+<h2>✅ Endpoints con botón "Probar endpoint" y formularios mejorados:</h2>
+<ul>
+    <li>✅ POST /api/register - Con campos individuales (nombre, correo, password, latitud, longitud)</li>
+    <li>✅ POST /api/login - Con campos individuales (correo, password, latitud opcional, longitud opcional)</li>
+    <li>✅ POST /api/logout - Con botón y sin campos (solo token)</li>
+    <li>✅ POST /api/actualizar - Con campos (latitud, longitud)</li>
+    <li>✅ POST /api/mensaje - Mejorado con campos individuales (contenido, sala_id opcional)</li>
+</ul>
+
+<h2>⏳ Endpoints que necesitan botón "Probar endpoint":</h2>
+<ul>
+    <li>POST /api/general - Enviar mensaje al chat general</li>
+    <li>POST /api/privado/cambiarchat - Cambiar sala activa</li>
+    <li>POST /api/privado/salir - Salir de una sala</li>
+    <li>POST /api/invitar - Invitar usuarios a una sala</li>
+    <li>DELETE /api/mensaje - Eliminar mensaje</li>
+</ul>
+
+<h2>📋 Cambios realizados:</h2>
+<ol>
+    <li>Convertidos los formularios JSON a campos individuales más fáciles de usar</li>
+    <li>Agregado auto-guardado del token al hacer login exitoso</li>
+    <li>Mejorada la función testEndpoint para soportar diferentes tipos de input</li>
+    <li>Soporte para arrays (como usuario_id separado por comas)</li>
+</ol>
+
+</body>
+</html>
